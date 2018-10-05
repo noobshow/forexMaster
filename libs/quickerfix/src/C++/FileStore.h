@@ -1,0 +1,132 @@
+/* -*- C++ -*- */
+
+/****************************************************************************
+** Copyright (c) 2001-2014
+**
+** This file is part of the QuickFIX FIX Engine
+**
+** This file may be distributed under the terms of the quickfixengine.org
+** license as defined by quickfixengine.org and appearing in the file
+** LICENSE included in the packaging of this file.
+**
+** This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
+** WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+**
+** See http://www.quickfixengine.org/LICENSE for licensing information.
+**
+** Contact ask@quickfixengine.org if any conditions of this licensing are
+** not clear to you.
+**
+****************************************************************************/
+
+#ifndef FIX_FILESTORE_H
+#define FIX_FILESTORE_H
+
+#ifdef _MSC_VER
+#pragma warning( disable : 4503 4355 4786 4290 )
+#endif
+
+#include "MessageStore.h"
+#include "SessionSettings.h"
+#include <fstream>
+#include <string>
+
+namespace FIX
+{
+class Session;
+
+/// Creates a file based implementation of MessageStore.
+class FileStoreFactory : public MessageStoreFactory
+{
+public:
+  FileStoreFactory( const SessionSettings& settings )
+: m_settings( settings ) {};
+  FileStoreFactory( const std::string& path )
+: m_path( path ) {};
+
+  MessageStore* create( const SessionID& );
+  void destroy( MessageStore* );
+private:
+  std::string m_path;
+  SessionSettings m_settings;
+};
+/*! @} */
+
+/**
+ * File based implementation of MessageStore.
+ *
+ * Four files are created by this implementation.  One for storing outgoing
+ * messages, one for indexing message locations, one for storing sequence numbers,
+ * and one for storing the session creation time.
+ *
+ * The formats of the files are:<br>
+ * &nbsp;&nbsp;
+ *   [path]+[BeginString]-[SenderCompID]-[TargetCompID].body<br>
+ * &nbsp;&nbsp;
+ *   [path]+[BeginString]-[SenderCompID]-[TargetCompID].header<br>
+ * &nbsp;&nbsp;
+ *   [path]+[BeginString]-[SenderCompID]-[TargetCompID].seqnums<br>
+ * &nbsp;&nbsp;
+ *   [path]+[BeginString]-[SenderCompID]-[TargetCompID].session<br>
+ *
+ *
+ * The messages file is a pure stream of %FIX messages.<br><br>
+ * The sequence number file is in the format of<br>
+ * &nbsp;&nbsp;
+ *   [SenderMsgSeqNum] : [TargetMsgSeqNum]<br><br>
+ * The session file is a UTC timestamp in the format of<br>
+ * &nbsp;&nbsp;
+ *   YYYYMMDD-HH:MM:SS
+ */
+class FileStore : public MessageStore
+{
+public:
+  FileStore( std::string, const SessionID& s );
+  virtual ~FileStore();
+
+  bool set( int, const std::string& ) THROW_DECL( IOException );
+  bool set( int, Sg::sg_buf_ptr, int n );
+  void get( int, int, std::vector < std::string > & ) const THROW_DECL( IOException );
+
+  int getNextSenderMsgSeqNum() const THROW_DECL( IOException );
+  int getNextTargetMsgSeqNum() const THROW_DECL( IOException );
+  void setNextSenderMsgSeqNum( int value ) THROW_DECL( IOException );
+  void setNextTargetMsgSeqNum( int value ) THROW_DECL( IOException );
+  void incrNextSenderMsgSeqNum() THROW_DECL( IOException );
+  void incrNextTargetMsgSeqNum() THROW_DECL( IOException );
+
+  void reset() THROW_DECL( IOException );
+  void refresh() THROW_DECL( IOException );
+
+private:
+  typedef std::pair < FILE_OFFSET_TYPE, int > OffsetSize;
+#ifdef HAVE_BOOST
+  typedef boost::unordered_map < int, OffsetSize > NumToOffset;
+#else
+  typedef std::map < int, OffsetSize > NumToOffset;
+#endif
+
+  void open( bool deleteFile );
+  void populateCache();
+  bool readFromFile( int offset, int size, std::string& msg );
+  void setSeqNum();
+  void setSession();
+
+  bool get( int, std::string& ) const THROW_DECL( IOException );
+
+  MemoryStore m_cache;
+  NumToOffset m_offsets;
+
+  std::string m_msgFileName;
+  std::string m_headerFileName;
+  std::string m_seqNumsFileName;
+  std::string m_sessionFileName;
+
+  FILE_HANDLE_TYPE m_msgFileHandle;
+  std::FILE* m_headerFile;
+  std::FILE* m_seqNumsFile;
+  std::FILE* m_sessionFile;
+};
+}
+
+#endif //FIX_FILESTORE_H

@@ -3,9 +3,8 @@ BUILD_DIR = build
 SRCS_DIR = src
 
 CXXFLAGS = -std=c++17 -Wall -Wshadow 
-INCLUDE_FLAGS = -I./libs -I./libs/ForexConnectAPI-1.5.0/include
-LD_FLAGS = -L./libs/ForexConnectAPI-1.5.0/lib -lpthread -lForexConnect
-
+INCLUDE_FLAGS = -I./libs -I./libs/quickerfix/include
+LD_FLAGS = -L./libs/quickerfix/lib -lpthread -lquickfix
 SRCS = $(shell find $(SRCS_DIR) -name '*.cpp' -or -name '*.c')
 OBJS = $(SRCS:%=$(BUILD_DIR)/%.o)
 

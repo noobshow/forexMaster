@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros">
+    <BOOST_INCLUDE>E:\Dev\boost_1_67_0</BOOST_INCLUDE>
+    <TBB_INCLUDE>E:\Dev\tbb2018_20180618oss\include</TBB_INCLUDE>
+    <SSL_INCLUDE>E:\Dev\OpenSSL-Win32\include</SSL_INCLUDE>
+    <WITH_BOOST>HAVE_BOOST=1</WITH_BOOST>
+    <WITH_TBB>HAVE_TBB=1</WITH_TBB>
+    <WITH_SSL>HAVE_SSL=1</WITH_SSL>
+  </PropertyGroup>
+  <PropertyGroup />
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(BOOST_INCLUDE);$(TBB_INCLUDE);$(SSL_INCLUDE)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_VC80_UPGRADE=0x0710;%(PreprocessorDefinitions);$(WITH_BOOST);$(WITH_TBB);$(WITH_SSL)</PreprocessorDefinitions>
+    </ClCompile>
+    <Lib>
+      <AdditionalDependencies>$(TBB_DEPS);$(SSL_DEPS)</AdditionalDependencies>
+    </Lib>
+    <Lib>
+      <AdditionalLibraryDirectories>$(BOOST_LIB);$(TBB_LIB);$(SSL_LIB)</AdditionalLibraryDirectories>
+    </Lib>
+    <Link>
+      <AdditionalLibraryDirectories>$(BOOST_LIB);$(TBB_LIB);$(SSL_LIB)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <BuildMacro Include="BOOST_INCLUDE">
+      <Value>$(BOOST_INCLUDE)</Value>
+    </BuildMacro>
+    <BuildMacro Include="TBB_INCLUDE">
+      <Value>$(TBB_INCLUDE)</Value>
+    </BuildMacro>
+    <BuildMacro Include="SSL_INCLUDE">
+      <Value>$(SSL_INCLUDE)</Value>
+    </BuildMacro>
+    <BuildMacro Include="WITH_BOOST">
+      <Value>$(WITH_BOOST)</Value>
+    </BuildMacro>
+    <BuildMacro Include="WITH_TBB">
+      <Value>$(WITH_TBB)</Value>
+    </BuildMacro>
+    <BuildMacro Include="WITH_SSL">
+      <Value>$(WITH_SSL)</Value>
+    </BuildMacro>
+  </ItemGroup>
+</Project>
