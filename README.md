@@ -1,2 +1,3 @@
 # forexMaster
-Attempt at automatic forex trader build on forexConnect API with FXCM.com
+Attempt at automatic forex trader build on FIX API (currently quickerFIX FIX engine)
+
