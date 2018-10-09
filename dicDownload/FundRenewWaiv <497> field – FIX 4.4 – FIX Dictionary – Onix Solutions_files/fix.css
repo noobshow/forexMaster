@@ -1,0 +1,227 @@
+
+#footer {
+  padding: 20px 0;
+  width: 100%; 
+  text-align: right; 
+}
+
+
+
+dt {
+
+	
+	margin-top: 12px;
+
+}
+
+
+
+.empty{
+
+		width: 100%;
+
+}
+
+th h1, th h2, th h3, th h4, th h5, th h6 {
+
+	margin: 0px;
+	padding: 0px;
+
+}	
+
+
+
+a.bottomLink, a.bottomLink:active{
+	
+	font-size: 8pt;
+	text-decoration: none;
+
+}
+
+a.bottomLink:visited{
+	
+	font-size: 8pt;
+	text-decoration: none;
+
+}
+
+a.bottomLink:hover{
+	
+	font-size: 8pt;
+	text-decoration: underline;
+
+}	
+
+.bottomCurrent {
+	font-size: 8pt;
+
+}
+
+.copy {
+
+	
+	font-size: 8pt;
+	margin-right: 30px;
+	text-align: right;
+
+}
+
+.sm {
+
+	
+	font-size: 8pt;
+
+}
+
+.white {
+	background-color: #ffffff;
+}
+table.white td, table.white th {
+	border-right: 1px solid #ffffff; 
+	padding: 5px;
+	vertical-align: top;
+}
+table.white th {
+	border-right: 1px solid #7584ab; 
+	border-top: 1px solid #7584ab;
+
+}
+caption {
+	
+
+	font-size: 10pt;
+
+	font-weight: bold;
+
+	color: #6B95BF;
+}
+
+
+
+.blockBorder {
+
+	border: 1px solid #D7901A;
+
+}
+
+.tr2, .n2 {
+
+	background-color: #F7F8FE;
+
+}
+
+
+
+.tr1, .n1 {
+
+	background-color: #EAF2FF;
+
+}
+
+
+.y1 {
+	  background-color: #F9E9CB;
+}
+
+
+.y2 {
+	background-color: #F9F4EB;
+}
+
+.th {
+
+	background-color: #5C73AB;
+
+}
+
+.component {
+
+	background-color: #E6D2E6;
+
+	font-weight: bold;
+
+}
+
+
+
+.yes {
+
+	color: #FF0060;
+
+}
+
+
+
+.CodeBlock{ 
+
+	font-family: 'Courier New', Courier, monospace; 
+
+	background-color: #F7F8FE; 
+
+	margin: 0px 15px 20px 15px; 
+
+	padding: 8px; border-style: solid; 
+
+	border-width: 1px; border-color: #C9CDF7; 
+
+}
+
+.comment{
+
+	color: green;
+
+	font-style:italic;
+
+}
+
+
+
+.constant{
+
+ 	color: brown;
+
+}
+
+th {
+	font-weight: bold;
+	color: #ffffff;
+	background-color: #5C73AB;
+
+}
+
+
+.fileSystem{
+
+	color: teal;
+
+}
+
+.keyWord{
+
+	color: blue;
+
+}
+
+.CodeBlock .constant, .CodeBlock .keyWord, .CodeBlock .fileSystem {
+
+	font-family: 'Courier New', Courier, monospace; 
+
+} 
+.leftBlock {
+	float: left;
+	display: inline-block;
+	margin-right: 5px;
+	
+}
+
+.rightBlock {
+	float: fight;
+	display: inline;
+}
+.clear {
+  clear: both;
+} 
+.listLinks {
+	
+}
+.right {text-align: right;}

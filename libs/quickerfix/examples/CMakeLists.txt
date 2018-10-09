@@ -1,5 +1,0 @@
-add_subdirectory(executor)
-add_subdirectory(tradeclient)
-add_subdirectory(ordermatch)
-add_subdirectory(codec)
-add_subdirectory(latency)
