@@ -16,12 +16,12 @@ public:
     sizeT avaliableBytes() const;
     sizeT receive(void* dataBuff, sizeT howMuch);
 
-    bool hasClosed() const;
+    bool hasDisconnected() const;
     //bool checkConnection(); losing connection != hasClosed
 
     void close();
 
     ~TCPSocket();
-private:
-    int socket;
+//private:
+    int sockfd;
 };

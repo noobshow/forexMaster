@@ -1,135 +1,138 @@
 #include "Logger.hpp"
 #include "TCPSocket.hpp"
+#include "FIX.hpp"
+#include "Waiter.hpp"
 #include <string>
+#include <thread>
 
+TCPSocket theSocket;
 
-
-namespace FIX
+inline char* addCstring(char* where, const char* cStr)
 {
-    namespace Types
-    {
-        //Char
-        class Char;
-        using Boolean = Char; // Y/N
-
-        //Int
-        class Int;
-        using DayOfMonth = Int;
-        using Length = Int;
-        using NumInGroup = Int;
-        using SeqNum = Int;
-        using TagNum = Int;
-
-        //Float
-        class Float;
-        using Amt = Float;
-        using Percentage = Float;
-        using Price = Float;
-        using PriceOffset = Float;
-        using Qty = Float;
-
-        //String
-        class String;
-        using Country = String;
-    }
+    char* res = strcpy(where, cStr) + strlen(cStr);
+    *res = FIX::SOH;
+    return (res+1);
 }
 
-
-namespace FIX
+inline char* addCstring(char* where, const char c)
 {
-    namespace Tags
-    {
-        constexpr const int MsgType = 35;
-        constexpr const int Price = 44;
-    }
-
-    namespace TagVal
-    {
-        struct MsgType
-        {
-            MsgType 
-
-            constexpr const char* Login = "35=1";
-            constexpr const char* Logout = "35=2";
-            constexpr const char* Reconnect = "34=3";
-        }
-
-        namespace Price
-        {
-            std::string val(float price){return std::string("44=")+std::to_string(price);}
-        }
-
-        namespace TradeCondition
-        {
-            int CashMarket = 1<<0;
-            int AveragePriceTrade = 1<<1;
-
-            std::string val(int options){return "oh_fuck";}
-        }
-    }
+    *(where++) = c;
+    return where+1;
 }
 
-struct TagData
+template <class T, class... Args> inline char* addCstring(char* where, T a, const Args&... args)
 {
-    int tag;
-    char* data;
-};
+    return addCstring(addCstring(where, a), args...);
+}
+    
+
+char msgBuff[1024*1024];
+char* realMsgStart;
+
+template <class... Args> void sendMessage(const Args&... args)
+{
+    //All user-given tags
+    auto last = addCstring(realMsgStart, args...);
+    
+    //BodyLen
+    int bodyLen = last-realMsgStart;
+    logg << bodyLen << '\n';
+    char bodyLenStr[10];
+    sprintf(bodyLenStr, "%d", bodyLen);
+    int bodyLenStrLen = strlen(bodyLenStr);
+    strcpy(realMsgStart - bodyLenStrLen-1, bodyLenStr);
+    for(char* c = realMsgStart-bodyLenStrLen-2; *c != '='; c--){*c = '0';}
+    *(realMsgStart-1) = FIX::SOH;
+
+    //Checksum
+    int checkSum = 0;
+    for(char* c = msgBuff; c < last; c++)
+        checkSum = (checkSum + *c)%256;
+
+    *(last++) = '1';
+    *(last++) = '0';
+    *(last++) = '=';
+    *(last++) = '0' + (checkSum/100)%10;
+    *(last++) = '0' + (checkSum/10)%10;
+    *(last++) = '0' + (checkSum%10);
+    *(last++) = FIX::SOH;
+
+    theSocket.send(msgBuff, last-msgBuff);
+
+    logg << "MESSAGE SENT: ";
+    for(char* c = msgBuff; *c != 0; c++) logg << (*c == FIX::SOH ? '|' : *c); 
+    logg << '\n';
+}
+
+char recvBuff[1024*1024];
+
+
+
+bool Login()
+{
+    logg << "Logging in...\n";
+
+    auto curTime = FIX::getCurDateAndTime();
+
+    /*
+    Host name: h50.p.ctrader.com
+    (Current IP address 178.62.43.199 can be changed without notice)
+    Port: 5211 (SSL), 5201 (Plain text).
+    Password: (a/c 3001287 password)
+    SenderCompID: fxpig.3001287
+    TargetCompID: CSERVER
+    SenderSubID: QUOTE
+    */
+
+    sendMessage(
+        FIX::MsgType::tagValLogon,
+        FIX::SenderCompID::tagVal("fxpig.3001287"),
+        FIX::TargetCompID::tagVal("CSERVER"),
+        //FIX::TargetSubID::tagVal("QUOTE"),
+        FIX::SenderSubID::tagVal("QUOTE"),
+        FIX::MsgSeqNum::tagVal(1),
+        FIX::SendingTime::tagVal(curTime.day, curTime.month, curTime.year, curTime.hour, curTime.minute, curTime.second),
+        FIX::EncryptMethod::tagValNoneOrOther,
+        FIX::HeartBtInt::tagVal(30),
+        FIX::ResetSeqNumFlag::tagValYesResetSequenceNumbers,
+        FIX::Username::tagVal("username"),
+        FIX::Password::tagVal("password")
+    );
+
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    if(theSocket.isSomethingToReceive())
+    {
+        auto bytesReceived = theSocket.receive(recvBuff, theSocket.avaliableBytes());
+        recvBuff[bytesReceived] = 0;
+    }
+    else
+    {
+        logg << "Didnt receive answer in time! aborting...\n";
+        abort();
+        return false;
+    }
+
+    logg << "MESSAGE RECEIVED:\n";
+    for(char* c = recvBuff; *c != 0; c++) logg << (*c == FIX::SOH ? '|' : *c); 
+    logg << '\n';
+    return true;
+}
 
 
 int main()
 {
-    TCPSocket socket;
-    socket.connectTo("127.0.0.1", 80);
+    const char* serverAddr = "178.62.43.199";
+    auto serverPort = 5201;
 
-    using namespace FIX;
+    if(theSocket.connectTo(serverAddr, serverPort))
+        logg << "Succesfully connected to server " << serverAddr << ":" << serverPort << " !!\n";
+    else
+        logg << "Failed to connect to server " << serverAddr << ":" << serverPort << " !!\n";
 
-    //Writing
-    logg << TagVal::MsgType::Login << '\n';
-    logg << TagVal::Price::val(40) << '\n';
-    logg << 
-        TagVal::TradeCondition::val(
-            TagVal::TradeCondition::CashMarket
-            TagVal::TradeCondition::AveragePriceTrade
-        )<< '\n';
+    realMsgStart = addCstring(msgBuff, FIX::BeginString::tagValFIX44,"9=12345");
 
+    Login();
 
-    //Reading
-    TagData tagData;
-    tagData tag = 35;
-    tagData data = "1";
-
-    switch(tagData.tag)
-    {
-        case Tags::MsgType:
-        {
-            TagVal::MsgType value(tagData.data); //parsing happens here
-
-            if(value.is(TagVal:::MsgType::valLogin)){/*...*/}
-            if(value.is(TagVal::MsgType::valLogout)){/*....*/}
-
-        } break;    
-
-        case Tags::Price:
-        {
-            TagVal::Price value(tagData.data); //parsing happens here
-            float price = value.get();
-
-
-        } break;
-
-        case Tags::TradeCondition:
-        {
-            TagVal::TradeCondition value(tagData.data);
-
-        }break;
-
-        default:
-        {
-            log << "unknown tag (" << tagData.tag << "=" << tagData.data << ")!\n";
-
-        } break;
-    }
-
-    socket.close();
+    theSocket.close();
 }
-

@@ -8,15 +8,16 @@
 #include <sys/ioctl.h>
 
 TCPSocket::TCPSocket()
-    {socket = -1;}
+    {sockfd = -1;}
 
 
 bool TCPSocket::connectTo(const char* ipv4addr, unsigned short port)
 {
-    if((socket = ::socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    if((sockfd = ::socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
+    return true;
         perror("[TCPSocket]: Socket creation");
-        return false;
+        return sockfd=-1, false;
     }
 
     sockaddr_in serverAddress;
@@ -28,66 +29,71 @@ bool TCPSocket::connectTo(const char* ipv4addr, unsigned short port)
     if(inet_pton(AF_INET, ipv4addr, &serverAddress.sin_addr) <= 0)
     {
         perror("[TCPSocket]: Invalid address");
-        return -1;
+        return sockfd=-1, false;
     }
 
-    if(::connect(socket, (sockaddr*)&serverAddress, sizeof(serverAddress)) < 0)
+    if(::connect(sockfd, (sockaddr*)&serverAddress, sizeof(serverAddress)) < 0)
     {
         perror("[TCPSocket]: Connect");
-        return -1;
+        return sockfd=-1, false;
     }
 
-    return 0;
+    return true;
 }
 
 TCPSocket::sizeT TCPSocket::send(void* data, TCPSocket::sizeT dataSize)
 {
-    return ::send(socket, data, dataSize, 0);
+    return ::send(sockfd, data, dataSize, 0);
 }
     
 bool TCPSocket::isSomethingToReceive() const //thats kinda prototypa - gotta learn more about this
 {
     fd_set theSet;
     FD_ZERO(&theSet);
-    FD_SET(socket, &theSet);
+    FD_SET(sockfd, &theSet);
 
     timeval timeout;
     timeout.tv_sec = 0;
     timeout.tv_usec = 0;
-    int activity = select(socket + 1, &theSet , NULL , NULL , &timeout);  
+    int activity = select(sockfd + 1, &theSet , NULL , NULL , &timeout);  
     
     if ((activity < 0) && (errno!=EINTR))  
     {  
         perror("select");
     }
 
-    return FD_ISSET(socket, &theSet);
+    return FD_ISSET(sockfd, &theSet);
 }
 
 TCPSocket::sizeT TCPSocket::avaliableBytes() const
 {
     int avaliableBytes;
-    ioctl(socket, FIONREAD, &avaliableBytes);
+    ioctl(sockfd, FIONREAD, &avaliableBytes);
 	return avaliableBytes;
 }
 
 TCPSocket::sizeT TCPSocket::receive(void* data, TCPSocket::sizeT dataSize)
 {
-	return ::recv(socket, data, dataSize, 0);;
+	return ::recv(sockfd, data, dataSize, 0);;
 }
 
-bool TCPSocket::hasClosed() const
+bool TCPSocket::hasDisconnected() const
 {
     return (isSomethingToReceive() && (avaliableBytes() <= 0));
 }
 
 void TCPSocket::close()
 {
-	::close(socket);
+    return;
+    if(sockfd != -1)
+	    ::close(sockfd);
+
+    sockfd = -1;
 }
 
 TCPSocket::~TCPSocket()
 {
-    if(!hasClosed())
+    return;
+    if(sockfd != -1)
         close();
 }
