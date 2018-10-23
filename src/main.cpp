@@ -36,7 +36,6 @@ template <class... Args> void sendMessage(const Args&... args)
     
     //BodyLen
     int bodyLen = last-realMsgStart;
-    logg << bodyLen << '\n';
     char bodyLenStr[10];
     sprintf(bodyLenStr, "%d", bodyLen);
     int bodyLenStrLen = strlen(bodyLenStr);
@@ -59,7 +58,7 @@ template <class... Args> void sendMessage(const Args&... args)
 
     theSocket.send(msgBuff, last-msgBuff);
 
-    logg << "MESSAGE SENT: ";
+    logg << "MESSAGE SENT: \n";
     for(char* c = msgBuff; *c != 0; c++) logg << (*c == FIX::SOH ? '|' : *c); 
     logg << '\n';
 }
@@ -127,14 +126,14 @@ bool Login()
 
 int main()
 {
-    const char* serverAddr = "46.105.103.224";
+    const char* serverHostName = "h23.p.ctrader.com";
     auto serverPort = 5201;
 
-    if(theSocket.connectTo(serverAddr, serverPort))
-        logg << "Succesfully connected to server " << serverAddr << ":" << serverPort << " !!\n";
+    if(theSocket.connectTo(serverHostName, serverPort))
+        logg << "Succesfully connected to server " << serverHostName << ":" << serverPort << " !!\n";
     else
     {
-        logg << "Failed to connect to server " << serverAddr << ":" << serverPort << " !!\n";
+        logg << "Failed to connect to server " << serverHostName << ":" << serverPort << " !!\n";
         return 0;
     }
 
@@ -144,7 +143,7 @@ int main()
         return 0;
     }
 
-    realMsgStart = addCstring(msgBuff, FIX::BeginString::tagValFIX44,"9=123");
+    realMsgStart = addCstring(msgBuff, FIX::BeginString::tagValFIX44,"9=12345");
 
     Login();
 

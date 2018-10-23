@@ -6,12 +6,13 @@
 #include <cstdio> 
 #include <errno.h>
 #include <sys/ioctl.h>
+#include <netdb.h>
 
 TCPSocket::TCPSocket()
     {sockfd = -1;}
 
 
-bool TCPSocket::connectTo(const char* ipv4addr, unsigned short port)
+bool TCPSocket::connectTo(std::array<unsigned char, 4> ipv4, unsigned short port)
 {
     if((sockfd = ::socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
@@ -25,6 +26,68 @@ bool TCPSocket::connectTo(const char* ipv4addr, unsigned short port)
 
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_port = htons(port);
+
+    char ipv4addr[4*3 + 3*1 + 1];
+    sprintf(ipv4addr, "%d.%d.%d.%d", ipv4[0], ipv4[1], ipv4[2], ipv4[3]);
+
+    if(inet_pton(AF_INET, ipv4addr, &serverAddress.sin_addr) <= 0)
+    {
+        perror("[TCPSocket]: Invalid address");
+        return sockfd=-1, false;
+    }
+
+    if(::connect(sockfd, (sockaddr*)&serverAddress, sizeof(serverAddress)) < 0)
+    {
+        perror("[TCPSocket]: Connect");
+        return sockfd=-1, false;
+    }
+
+    return true;
+}
+
+int hostname_to_ip(const char * hostname , char* ip)
+{
+    struct hostent *he;
+    struct in_addr **addr_list;
+    int i;
+         
+    if ( (he = gethostbyname( hostname ) ) == NULL) 
+    {
+        // get the host info
+        herror("gethostbyname");
+        return 1;
+    }
+ 
+    addr_list = (struct in_addr **) he->h_addr_list;
+     
+    for(i = 0; addr_list[i] != NULL; i++) 
+    {
+        //Return the first one;
+        strcpy(ip , inet_ntoa(*addr_list[i]) );
+        return 0;
+    }
+     
+    return 1;
+}
+
+
+bool TCPSocket::connectTo(const char* serverHostName, unsigned short port)
+{
+    if((sockfd = ::socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {
+    return true;
+        perror("[TCPSocket]: Socket creation");
+        return sockfd=-1, false;
+    }
+
+    sockaddr_in serverAddress;
+    memset(&serverAddress, '0', sizeof(serverAddress));
+
+    serverAddress.sin_family = AF_INET;
+    serverAddress.sin_port = htons(port);
+
+    char ipv4addr[30];
+    hostname_to_ip(serverHostName, ipv4addr);
 
     if(inet_pton(AF_INET, ipv4addr, &serverAddress.sin_addr) <= 0)
     {
