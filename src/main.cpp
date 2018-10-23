@@ -72,11 +72,11 @@ bool Login()
 {
     logg << "Logging in...\n";
 
-    auto curTime = FIX::getCurDateAndTime();
+    auto curTime = FIX::getCurUTCDateAndTime();
 
     /*
-    Host name: h50.p.ctrader.com
-    (Current IP address 178.62.43.199 can be changed without notice)
+    Host name: h23.p.ctrader.com
+    (Current IP address 46.105.103.224 can be changed without notice)
     Port: 5211 (SSL), 5201 (Plain text).
     Password: (a/c 3001287 password)
     SenderCompID: fxpig.3001287
@@ -88,18 +88,18 @@ bool Login()
         FIX::MsgType::tagValLogon,
         FIX::SenderCompID::tagVal("fxpig.3001287"),
         FIX::TargetCompID::tagVal("CSERVER"),
-        //FIX::TargetSubID::tagVal("QUOTE"),
+        FIX::TargetSubID::tagVal("QUOTE"),
         FIX::SenderSubID::tagVal("QUOTE"),
         FIX::MsgSeqNum::tagVal(1),
         FIX::SendingTime::tagVal(curTime.day, curTime.month, curTime.year, curTime.hour, curTime.minute, curTime.second),
         FIX::EncryptMethod::tagValNoneOrOther,
         FIX::HeartBtInt::tagVal(30),
         FIX::ResetSeqNumFlag::tagValYesResetSequenceNumbers,
-        FIX::Username::tagVal("username"),
-        FIX::Password::tagVal("password")
+        FIX::Username::tagVal("3001287"),
+        FIX::Password::tagVal("thisIsATemporaryPassword1337")
     );
 
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     if(theSocket.isSomethingToReceive())
     {
@@ -113,24 +113,38 @@ bool Login()
         return false;
     }
 
+    if(theSocket.hasDisconnected())
+    {
+        logg << "Server disconnected!\n";
+        return false;
+    }
+
     logg << "MESSAGE RECEIVED:\n";
     for(char* c = recvBuff; *c != 0; c++) logg << (*c == FIX::SOH ? '|' : *c); 
     logg << '\n';
     return true;
 }
 
-
 int main()
 {
-    const char* serverAddr = "178.62.43.199";
+    const char* serverAddr = "46.105.103.224";
     auto serverPort = 5201;
 
     if(theSocket.connectTo(serverAddr, serverPort))
         logg << "Succesfully connected to server " << serverAddr << ":" << serverPort << " !!\n";
     else
+    {
         logg << "Failed to connect to server " << serverAddr << ":" << serverPort << " !!\n";
+        return 0;
+    }
 
-    realMsgStart = addCstring(msgBuff, FIX::BeginString::tagValFIX44,"9=12345");
+    if(theSocket.hasDisconnected())
+    {
+        logg << "Server disconnected!\n";
+        return 0;
+    }
+
+    realMsgStart = addCstring(msgBuff, FIX::BeginString::tagValFIX44,"9=123");
 
     Login();
 

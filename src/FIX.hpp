@@ -138,9 +138,13 @@ namespace FIX
         }
     } //namespace Types
 
-    Types::Date getCurrentDate();
-    Types::Time getCurrentTime();
+    Types::Date getCurDate();
+    Types::Time getCurTime();
     Types::DateAndTime getCurDateAndTime();
+
+    Types::Date getCurUTCDate();
+    Types::Time getCurUTCTime();
+    Types::DateAndTime getCurUTCDateAndTime();
 
 } //namespace FIX
 
