@@ -16,9 +16,8 @@ bool TCPSocket::connectTo(std::array<unsigned char, 4> ipv4, unsigned short port
 {
     if((sockfd = ::socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
-    return true;
         perror("[TCPSocket]: Socket creation");
-        return sockfd=-1, false;
+        return false;
     }
 
     sockaddr_in serverAddress;
@@ -27,7 +26,7 @@ bool TCPSocket::connectTo(std::array<unsigned char, 4> ipv4, unsigned short port
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_port = htons(port);
 
-    char ipv4addr[4*3 + 3*1 + 1];
+    char ipv4addr[4*3 + 3*1];
     sprintf(ipv4addr, "%d.%d.%d.%d", ipv4[0], ipv4[1], ipv4[2], ipv4[3]);
 
     if(inet_pton(AF_INET, ipv4addr, &serverAddress.sin_addr) <= 0)
@@ -45,7 +44,7 @@ bool TCPSocket::connectTo(std::array<unsigned char, 4> ipv4, unsigned short port
     return true;
 }
 
-int hostname_to_ip(const char * hostname , char* ip)
+int hostnameToIp(const char * hostname , char* ip)
 {
     struct hostent *he;
     struct in_addr **addr_list;
@@ -73,11 +72,12 @@ int hostname_to_ip(const char * hostname , char* ip)
 
 bool TCPSocket::connectTo(const char* serverHostName, unsigned short port)
 {
-    if((sockfd = ::socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    if(sockfd < 0)
     {
-    return true;
         perror("[TCPSocket]: Socket creation");
-        return sockfd=-1, false;
+        return false;
     }
 
     sockaddr_in serverAddress;
@@ -87,7 +87,10 @@ bool TCPSocket::connectTo(const char* serverHostName, unsigned short port)
     serverAddress.sin_port = htons(port);
 
     char ipv4addr[30];
-    hostname_to_ip(serverHostName, ipv4addr);
+    if(hostnameToIp(serverHostName, ipv4addr) != 0)
+    {
+        return sockfd=-1, false;
+    }
 
     if(inet_pton(AF_INET, ipv4addr, &serverAddress.sin_addr) <= 0)
     {

@@ -1,6 +1,10 @@
+#pragma once
+
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include <string>
+
 
 namespace FIX
 {
@@ -65,7 +69,7 @@ namespace FIX
 
         struct MultipleValueString
         {
-
+            
         };
 
         inline void fromString(const char* str, MultipleValueString& m)
@@ -145,6 +149,8 @@ namespace FIX
     Types::Date getCurUTCDate();
     Types::Time getCurUTCTime();
     Types::DateAndTime getCurUTCDateAndTime();
+
+    std::string toHuman(int tag, const char* val);
 
 } //namespace FIX
 

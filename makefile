@@ -2,9 +2,10 @@ BUILD_DIR = build
 
 SRCS_DIR = src
 
-CXXFLAGS = -std=c++17 -Wall -Wshadow
-INCLUDE_FLAGS = -I./libs 
-LD_FLAGS = -lpthread -lpthread
+DEBFLAGS = -fsanitize=undefined -O0 -fsanitize=address
+CXXFLAGS = -std=c++17 -Wall -Wshadow 
+INCLUDE_FLAGS = -I./libs -I./src
+LD_FLAGS = -lpthread
 SRCS = $(shell find $(SRCS_DIR) -name '*.cpp' -or -name '*.c')
 OBJS = $(SRCS:%=$(BUILD_DIR)/%.o)
 
@@ -19,14 +20,6 @@ main: $(OBJS)
 
 test: main
 	./main
-
-fixGen: fixGen/fixGen.cpp
-	g++ fixGen/fixGen.cpp -o fixGen/fixGen $(CXXFLAGS)
-
-fixGenRun: fixGen/fixGen.cpp
-	g++ fixGen/fixGen.cpp -o fixGen/fixGen $(CXXFLAGS)
-	./fixGen/fixGen
-
 
 clean:
 	find $(BUILD_DIR) -name "*.o" -delete && find $(BUILD_DIR) -name "*.d" -delete

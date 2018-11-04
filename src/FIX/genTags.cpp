@@ -1,9 +1,9 @@
-#include "FIX.hpp"
+#include "Tags.hpp"
 #include <cstring>
 #include <cstdio>
 
-namespace FIX {
-using namespace Types;
+namespace FIX
+{
 char Account::toStrBuff[1024];
 char AccountStrBuffInit = (memcpy(Account::toStrBuff, "1=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
@@ -129,6 +129,9 @@ char OrigClOrdIDStrBuffInit = (memcpy(OrigClOrdID::toStrBuff, "41=\0\0\0\0\0\0\0
 
 char OrigTime::toStrBuff[1024];
 char OrigTimeStrBuffInit = (memcpy(OrigTime::toStrBuff, "42=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
+char PossDupFlag::toStrBuff[1024];
+char PossDupFlagStrBuffInit = (memcpy(PossDupFlag::toStrBuff, "43=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
 char Price::toStrBuff[1024];
 char PriceStrBuffInit = (memcpy(Price::toStrBuff, "44=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
@@ -289,6 +292,9 @@ char RawDataLengthStrBuffInit = (memcpy(RawDataLength::toStrBuff, "95=\0\0\0\0\0
 char RawData::toStrBuff[1024];
 char RawDataStrBuffInit = (memcpy(RawData::toStrBuff, "96=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
+char PossResend::toStrBuff[1024];
+char PossResendStrBuffInit = (memcpy(PossResend::toStrBuff, "97=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
 char EncryptMethod::toStrBuff[1024];
 char EncryptMethodStrBuffInit = (memcpy(EncryptMethod::toStrBuff, "98=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
@@ -331,6 +337,12 @@ char MaxFloorStrBuffInit = (memcpy(MaxFloor::toStrBuff, "111=\0\0\0\0\0\0\0\0\0\
 char TestReqID::toStrBuff[1024];
 char TestReqIDStrBuffInit = (memcpy(TestReqID::toStrBuff, "112=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
+char ReportToExch::toStrBuff[1024];
+char ReportToExchStrBuffInit = (memcpy(ReportToExch::toStrBuff, "113=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
+char LocateReqd::toStrBuff[1024];
+char LocateReqdStrBuffInit = (memcpy(LocateReqd::toStrBuff, "114=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
 char OnBehalfOfCompID::toStrBuff[1024];
 char OnBehalfOfCompIDStrBuffInit = (memcpy(OnBehalfOfCompID::toStrBuff, "115=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
@@ -349,8 +361,14 @@ char SettlCurrAmtStrBuffInit = (memcpy(SettlCurrAmt::toStrBuff, "119=\0\0\0\0\0\
 char SettlCurrency::toStrBuff[1024];
 char SettlCurrencyStrBuffInit = (memcpy(SettlCurrency::toStrBuff, "120=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
+char ForexReq::toStrBuff[1024];
+char ForexReqStrBuffInit = (memcpy(ForexReq::toStrBuff, "121=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
 char OrigSendingTime::toStrBuff[1024];
 char OrigSendingTimeStrBuffInit = (memcpy(OrigSendingTime::toStrBuff, "122=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
+char GapFillFlag::toStrBuff[1024];
+char GapFillFlagStrBuffInit = (memcpy(GapFillFlag::toStrBuff, "123=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
 char NoExecs::toStrBuff[1024];
 char NoExecsStrBuffInit = (memcpy(NoExecs::toStrBuff, "124=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
@@ -369,6 +387,9 @@ char DeliverToCompIDStrBuffInit = (memcpy(DeliverToCompID::toStrBuff, "128=\0\0\
 
 char DeliverToSubID::toStrBuff[1024];
 char DeliverToSubIDStrBuffInit = (memcpy(DeliverToSubID::toStrBuff, "129=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
+char IOINaturalFlag::toStrBuff[1024];
+char IOINaturalFlagStrBuffInit = (memcpy(IOINaturalFlag::toStrBuff, "130=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
 char QuoteReqID::toStrBuff[1024];
 char QuoteReqIDStrBuffInit = (memcpy(QuoteReqID::toStrBuff, "131=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
@@ -399,6 +420,9 @@ char MiscFeeTypeStrBuffInit = (memcpy(MiscFeeType::toStrBuff, "139=\0\0\0\0\0\0\
 
 char PrevClosePx::toStrBuff[1024];
 char PrevClosePxStrBuffInit = (memcpy(PrevClosePx::toStrBuff, "140=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
+char ResetSeqNumFlag::toStrBuff[1024];
+char ResetSeqNumFlagStrBuffInit = (memcpy(ResetSeqNumFlag::toStrBuff, "141=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
 char SenderLocationID::toStrBuff[1024];
 char SenderLocationIDStrBuffInit = (memcpy(SenderLocationID::toStrBuff, "142=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
@@ -598,6 +622,9 @@ char OptAttributeStrBuffInit = (memcpy(OptAttribute::toStrBuff, "206=\0\0\0\0\0\
 char SecurityExchange::toStrBuff[1024];
 char SecurityExchangeStrBuffInit = (memcpy(SecurityExchange::toStrBuff, "207=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
+char NotifyBrokerOfCredit::toStrBuff[1024];
+char NotifyBrokerOfCreditStrBuffInit = (memcpy(NotifyBrokerOfCredit::toStrBuff, "208=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
 char AllocHandlInst::toStrBuff[1024];
 char AllocHandlInstStrBuffInit = (memcpy(AllocHandlInst::toStrBuff, "209=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
@@ -745,6 +772,9 @@ char UnderlyingCreditRatingStrBuffInit = (memcpy(UnderlyingCreditRating::toStrBu
 char LegCreditRating::toStrBuff[1024];
 char LegCreditRatingStrBuffInit = (memcpy(LegCreditRating::toStrBuff, "257=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
+char TradedFlatSwitch::toStrBuff[1024];
+char TradedFlatSwitchStrBuffInit = (memcpy(TradedFlatSwitch::toStrBuff, "258=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
 char BasisFeatureDate::toStrBuff[1024];
 char BasisFeatureDateStrBuffInit = (memcpy(BasisFeatureDate::toStrBuff, "259=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
@@ -762,6 +792,9 @@ char MarketDepthStrBuffInit = (memcpy(MarketDepth::toStrBuff, "264=\0\0\0\0\0\0\
 
 char MDUpdateType::toStrBuff[1024];
 char MDUpdateTypeStrBuffInit = (memcpy(MDUpdateType::toStrBuff, "265=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
+char AggregatedBook::toStrBuff[1024];
+char AggregatedBookStrBuffInit = (memcpy(AggregatedBook::toStrBuff, "266=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
 char NoMDEntryTypes::toStrBuff[1024];
 char NoMDEntryTypesStrBuffInit = (memcpy(NoMDEntryTypes::toStrBuff, "267=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
@@ -937,11 +970,20 @@ char SecurityResponseTypeStrBuffInit = (memcpy(SecurityResponseType::toStrBuff, 
 char SecurityStatusReqID::toStrBuff[1024];
 char SecurityStatusReqIDStrBuffInit = (memcpy(SecurityStatusReqID::toStrBuff, "324=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
+char UnsolicitedIndicator::toStrBuff[1024];
+char UnsolicitedIndicatorStrBuffInit = (memcpy(UnsolicitedIndicator::toStrBuff, "325=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
 char SecurityTradingStatus::toStrBuff[1024];
 char SecurityTradingStatusStrBuffInit = (memcpy(SecurityTradingStatus::toStrBuff, "326=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
 char HaltReason::toStrBuff[1024];
 char HaltReasonStrBuffInit = (memcpy(HaltReason::toStrBuff, "327=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
+char InViewOfCommon::toStrBuff[1024];
+char InViewOfCommonStrBuffInit = (memcpy(InViewOfCommon::toStrBuff, "328=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
+char DueToRelated::toStrBuff[1024];
+char DueToRelatedStrBuffInit = (memcpy(DueToRelated::toStrBuff, "329=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
 char BuyVolume::toStrBuff[1024];
 char BuyVolumeStrBuffInit = (memcpy(BuyVolume::toStrBuff, "330=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
@@ -1084,6 +1126,9 @@ char ContraBrokerStrBuffInit = (memcpy(ContraBroker::toStrBuff, "375=\0\0\0\0\0\
 char ComplianceID::toStrBuff[1024];
 char ComplianceIDStrBuffInit = (memcpy(ComplianceID::toStrBuff, "376=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
+char SolicitedFlag::toStrBuff[1024];
+char SolicitedFlagStrBuffInit = (memcpy(SolicitedFlag::toStrBuff, "377=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
 char ExecRestatementReason::toStrBuff[1024];
 char ExecRestatementReasonStrBuffInit = (memcpy(ExecRestatementReason::toStrBuff, "378=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
@@ -1182,6 +1227,9 @@ char LiquidityIndTypeStrBuffInit = (memcpy(LiquidityIndType::toStrBuff, "409=\0\
 
 char WtAverageLiquidity::toStrBuff[1024];
 char WtAverageLiquidityStrBuffInit = (memcpy(WtAverageLiquidity::toStrBuff, "410=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
+char ExchangeForPhysical::toStrBuff[1024];
+char ExchangeForPhysicalStrBuffInit = (memcpy(ExchangeForPhysical::toStrBuff, "411=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
 char OutMainCntryUIndex::toStrBuff[1024];
 char OutMainCntryUIndexStrBuffInit = (memcpy(OutMainCntryUIndex::toStrBuff, "412=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
@@ -1338,6 +1386,9 @@ char UnderlyingProductStrBuffInit = (memcpy(UnderlyingProduct::toStrBuff, "462=\
 
 char UnderlyingCFICode::toStrBuff[1024];
 char UnderlyingCFICodeStrBuffInit = (memcpy(UnderlyingCFICode::toStrBuff, "463=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
+char TestMessageIndicator::toStrBuff[1024];
+char TestMessageIndicatorStrBuffInit = (memcpy(TestMessageIndicator::toStrBuff, "464=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
 char QuantityType::toStrBuff[1024];
 char QuantityTypeStrBuffInit = (memcpy(QuantityType::toStrBuff, "465=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
@@ -1585,6 +1636,9 @@ char NestedPartySubIDStrBuffInit = (memcpy(NestedPartySubID::toStrBuff, "545=\0\
 char Scope::toStrBuff[1024];
 char ScopeStrBuffInit = (memcpy(Scope::toStrBuff, "546=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
+char MDImplicitDelete::toStrBuff[1024];
+char MDImplicitDeleteStrBuffInit = (memcpy(MDImplicitDelete::toStrBuff, "547=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
 char CrossID::toStrBuff[1024];
 char CrossIDStrBuffInit = (memcpy(CrossID::toStrBuff, "548=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
@@ -1651,6 +1705,9 @@ char TradeRequestIDStrBuffInit = (memcpy(TradeRequestID::toStrBuff, "568=\0\0\0\
 char TradeRequestType::toStrBuff[1024];
 char TradeRequestTypeStrBuffInit = (memcpy(TradeRequestType::toStrBuff, "569=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
+char PreviouslyReported::toStrBuff[1024];
+char PreviouslyReportedStrBuffInit = (memcpy(PreviouslyReported::toStrBuff, "570=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
 char TradeReportID::toStrBuff[1024];
 char TradeReportIDStrBuffInit = (memcpy(TradeReportID::toStrBuff, "571=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
@@ -1662,6 +1719,9 @@ char MatchStatusStrBuffInit = (memcpy(MatchStatus::toStrBuff, "573=\0\0\0\0\0\0\
 
 char MatchType::toStrBuff[1024];
 char MatchTypeStrBuffInit = (memcpy(MatchType::toStrBuff, "574=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
+char OddLot::toStrBuff[1024];
+char OddLotStrBuffInit = (memcpy(OddLot::toStrBuff, "575=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
 char NoClearingInstructions::toStrBuff[1024];
 char NoClearingInstructionsStrBuffInit = (memcpy(NoClearingInstructions::toStrBuff, "576=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
@@ -1843,6 +1903,9 @@ char OfferYieldStrBuffInit = (memcpy(OfferYield::toStrBuff, "634=\0\0\0\0\0\0\0\
 char ClearingFeeIndicator::toStrBuff[1024];
 char ClearingFeeIndicatorStrBuffInit = (memcpy(ClearingFeeIndicator::toStrBuff, "635=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
+char WorkingIndicator::toStrBuff[1024];
+char WorkingIndicatorStrBuffInit = (memcpy(WorkingIndicator::toStrBuff, "636=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
 char LegLastPx::toStrBuff[1024];
 char LegLastPxStrBuffInit = (memcpy(LegLastPx::toStrBuff, "637=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
@@ -1881,6 +1944,9 @@ char MinOfferSizeStrBuffInit = (memcpy(MinOfferSize::toStrBuff, "648=\0\0\0\0\0\
 
 char QuoteStatusReqID::toStrBuff[1024];
 char QuoteStatusReqIDStrBuffInit = (memcpy(QuoteStatusReqID::toStrBuff, "649=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
+char LegalConfirm::toStrBuff[1024];
+char LegalConfirmStrBuffInit = (memcpy(LegalConfirm::toStrBuff, "650=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
 char UnderlyingLastPx::toStrBuff[1024];
 char UnderlyingLastPxStrBuffInit = (memcpy(UnderlyingLastPx::toStrBuff, "651=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
@@ -2029,6 +2095,9 @@ char YieldRedemptionPriceTypeStrBuffInit = (memcpy(YieldRedemptionPriceType::toS
 char BenchmarkSecurityID::toStrBuff[1024];
 char BenchmarkSecurityIDStrBuffInit = (memcpy(BenchmarkSecurityID::toStrBuff, "699=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
+char ReversalIndicator::toStrBuff[1024];
+char ReversalIndicatorStrBuffInit = (memcpy(ReversalIndicator::toStrBuff, "700=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
 char YieldCalcDate::toStrBuff[1024];
 char YieldCalcDateStrBuffInit = (memcpy(YieldCalcDate::toStrBuff, "701=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
@@ -2082,6 +2151,12 @@ char SettlSessSubIDStrBuffInit = (memcpy(SettlSessSubID::toStrBuff, "717=\0\0\0\
 
 char AdjustmentType::toStrBuff[1024];
 char AdjustmentTypeStrBuffInit = (memcpy(AdjustmentType::toStrBuff, "718=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
+char ContraryInstructionIndicator::toStrBuff[1024];
+char ContraryInstructionIndicatorStrBuffInit = (memcpy(ContraryInstructionIndicator::toStrBuff, "719=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
+char PriorSpreadIndicator::toStrBuff[1024];
+char PriorSpreadIndicatorStrBuffInit = (memcpy(PriorSpreadIndicator::toStrBuff, "720=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
 char PosMaintRptID::toStrBuff[1024];
 char PosMaintRptIDStrBuffInit = (memcpy(PosMaintRptID::toStrBuff, "721=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
@@ -2181,6 +2256,9 @@ char SideMultiLegReportingTypeStrBuffInit = (memcpy(SideMultiLegReportingType::t
 
 char NoPosAmt::toStrBuff[1024];
 char NoPosAmtStrBuffInit = (memcpy(NoPosAmt::toStrBuff, "753=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
+char AutoAcceptIndicator::toStrBuff[1024];
+char AutoAcceptIndicatorStrBuffInit = (memcpy(AutoAcceptIndicator::toStrBuff, "754=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
 char AllocReportID::toStrBuff[1024];
 char AllocReportIDStrBuffInit = (memcpy(AllocReportID::toStrBuff, "755=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
@@ -2307,6 +2385,9 @@ char AllocReportRefIDStrBuffInit = (memcpy(AllocReportRefID::toStrBuff, "795=\0\
 
 char AllocCancReplaceReason::toStrBuff[1024];
 char AllocCancReplaceReasonStrBuffInit = (memcpy(AllocCancReplaceReason::toStrBuff, "796=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
+char CopyMsgIndicator::toStrBuff[1024];
+char CopyMsgIndicatorStrBuffInit = (memcpy(CopyMsgIndicator::toStrBuff, "797=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
 char AllocAccountType::toStrBuff[1024];
 char AllocAccountTypeStrBuffInit = (memcpy(AllocAccountType::toStrBuff, "798=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
@@ -2467,6 +2548,9 @@ char TargetStrategyPerformanceStrBuffInit = (memcpy(TargetStrategyPerformance::t
 char LastLiquidityInd::toStrBuff[1024];
 char LastLiquidityIndStrBuffInit = (memcpy(LastLiquidityInd::toStrBuff, "851=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
+char PublishTrdIndicator::toStrBuff[1024];
+char PublishTrdIndicatorStrBuffInit = (memcpy(PublishTrdIndicator::toStrBuff, "852=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
 char ShortSaleReason::toStrBuff[1024];
 char ShortSaleReasonStrBuffInit = (memcpy(ShortSaleReason::toStrBuff, "853=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
@@ -2587,6 +2671,9 @@ char MiscFeeBasisStrBuffInit = (memcpy(MiscFeeBasis::toStrBuff, "891=\0\0\0\0\0\
 char TotNoAllocs::toStrBuff[1024];
 char TotNoAllocsStrBuffInit = (memcpy(TotNoAllocs::toStrBuff, "892=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
+char LastFragment::toStrBuff[1024];
+char LastFragmentStrBuffInit = (memcpy(LastFragment::toStrBuff, "893=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
 char CollReqID::toStrBuff[1024];
 char CollReqIDStrBuffInit = (memcpy(CollReqID::toStrBuff, "894=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
@@ -2640,6 +2727,9 @@ char CollStatusStrBuffInit = (memcpy(CollStatus::toStrBuff, "910=\0\0\0\0\0\0\0\
 
 char TotNumReports::toStrBuff[1024];
 char TotNumReportsStrBuffInit = (memcpy(TotNumReports::toStrBuff, "911=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
+
+char LastRptRequested::toStrBuff[1024];
+char LastRptRequestedStrBuffInit = (memcpy(LastRptRequested::toStrBuff, "912=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
 char AgreementDesc::toStrBuff[1024];
 char AgreementDescStrBuffInit = (memcpy(AgreementDesc::toStrBuff, "913=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
@@ -2773,4 +2863,8 @@ char LegContractSettlMonthStrBuffInit = (memcpy(LegContractSettlMonth::toStrBuff
 char LegInterestAccrualDate::toStrBuff[1024];
 char LegInterestAccrualDateStrBuffInit = (memcpy(LegInterestAccrualDate::toStrBuff, "956=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 10), 0);
 
+std::string toHuman(int tag, const char* val)
+{
+return "";
+}
 } //namespace FIX
