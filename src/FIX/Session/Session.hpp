@@ -7,6 +7,8 @@
 #include <vector>
 #include <atomic>
 #include <mutex>
+#include <shared_mutex>
+#include <unordered_map>
 
 namespace FIX
 {
@@ -14,56 +16,15 @@ namespace FIX
 class Session
 {
 public:
-    Session()
-    {
-        receiver = nullptr;
-        isOnRecvQueue = new std::timed_mutex[1000]; // <- Max FIX tag number
-    }
+    Session();
     
-    bool start(const char* serverHostName, int port, const char* login, const char* password)
-    {
-        if(socket.connectTo(serverHostName, port))
-            logg << "Succesfully connected to server " << serverHostName << ":" << port << "\n";
-        else
-        {
-            logg << "Failed to connect to server " << serverHostName << ":" << port << "\n";
-            return false;
-        }
-
-        receiver = new Receiver(this, socket);
-
-        msgBuff = (char*)malloc(1024*1024); //Messages >1MB are not supported
-        msgContentStart = addTagVal(msgBuff, FIX::BeginString::tagValFIX44, "9=12345");
-
-        sendLogin();
-
-        //Wait until there is Logon message in recvQueue
-        //some mutex wait condition or some shit
-
-        return true;
-    }
-
-    void finish()
-    {
-        //Logout
-        if(receiver != nullptr)
-        {
-            receiver->finish();
-            delete receiver;
-            receiver = nullptr;
-        }
-        //Disconnect
-    }
+    bool start(const char* serverHostName, int port, const char* login, const char* password);
+    void finish();
 
     template <class... Args>
     void sendMessage(const Args&... args);
 
-    ~Session()
-    {
-        finish();
-        free(msgBuff);
-        delete[] isOnRecvQueue;
-    }
+    ~Session();
 
 private:
     class Receiver;
@@ -84,25 +45,35 @@ private:
         Message();
         Message(const Message& msg);
         Message(Message&& msg); //to avoid unnecesary copying
-    
+        Message& operator=(const Message& msg);
+        Message& operator=(Message&& msg);
+
+        ~Message(){memory.reset();}
     private:
         friend Receiver;
         std::shared_ptr<const char*> memory;
     };
 
-
     TCPSocket socket;
+
+    char* msgBuff; //Send Buffer
+    char* msgContentStart; //SendBuffer after 8=FIX4.4|9=12345|
+
     Receiver* receiver;
-    void (*onPriceChangeCallback)();
-    
+
     std::deque<Message> recvQueue;
-    std::mutex recvQueueMutex;
+    std::shared_mutex recvQueueLock;
 
-    //int howManyOfTypeOnQueue[...]
-    std::timed_mutex* isOnRecvQueue;
+    std::condition_variable newMessage;
+    std::mutex newMessageLock;
 
-    char* msgBuff;
-    char* msgContentStart;
+    template <class ChronoTimePoint>
+    bool waitForNewMessagesUntil(ChronoTimePoint timeout)
+    {
+        std::unique_lock<std::mutex> newMessageLockGuard(newMessageLock);
+        auto waitRes = newMessage.wait_until(newMessageLockGuard, timeout);
+        return (waitRes != std::cv_status::timeout);
+    }
 
     //Writes to cstring tagVal0, SOH, tagVal1, SOH...
     template <class T, class... Args> 
@@ -118,15 +89,21 @@ private:
 
     void onNewMessage(Message&& msg)
     {
-        if(msg.tagVals[2].tag != FIX::MsgType::tag)
-            logg << "Oh shite\n";
+        recvQueueLock.lock();
 
-        recvQueueMutex.lock();
+        logg << "\nReceived new message!\n";
+        for(auto& tagVal : msg.tagVals)
+            logg << toHuman(tagVal.tag, tagVal.val) << '\n';
+        logg << '\n';
+        
         recvQueue.emplace_back(std::move(msg));
-        recvQueueMutex.unlock();
+        newMessage.notify_all();
+
+        recvQueueLock.unlock();
     }
 
-    void sendLogin()
+
+    bool login()
     {
         logg << "Logging in...\n";
 
@@ -146,6 +123,59 @@ private:
             FIX::Username::tagVal("3001287"),
             FIX::Password::tagVal("thisIsATemporaryPassword1337")
         );
+
+        auto lastProccesedTime = curTime;
+
+        bool result = false;
+        bool resultFound = false;
+
+        auto processMessage = [&](const Message& m){
+            if(!(lastProccesedTime < m.recvTime))
+                return;
+
+            if(!strcmp(m.tagVals[2].val, FIX::MsgType::valLogon))
+            {
+                //Logged in nicely
+                result = true;
+                resultFound = true;
+            }
+        };
+
+        auto loginTimeout = std::chrono::system_clock::now() + std::chrono::milliseconds(500);
+
+        std::shared_lock<std::shared_mutex> recvQueueLockGuard(recvQueueLock);
+
+        for(const Message& m : recvQueue)
+        {
+            processMessage(m);
+            if(resultFound)
+                return result;
+        }
+
+        recvQueueLockGuard.unlock();
+
+        while(std::chrono::system_clock::now() < loginTimeout)
+        {
+
+            if(waitForNewMessagesUntil(loginTimeout))
+            {
+                recvQueueLockGuard.lock();
+                for(const Message& m : recvQueue)
+                {
+                    processMessage(m);
+                    if(resultFound)
+                        return result;
+                }       
+                recvQueueLockGuard.unlock();
+            }
+            else
+            {
+                //Timeout reached - no result then login failed
+                return false;
+            }
+        }
+
+        return false;
     }
 };
 

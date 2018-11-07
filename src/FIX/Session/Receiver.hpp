@@ -92,6 +92,13 @@ private:
         //curMem for writing val
         char* curMem = memoryForStart;
         char* curMemEnd = memoryForStartEnd;
+        
+        struct MemoryGuard{
+            char* ptr = nullptr;
+            ~MemoryGuard() {if(ptr != nullptr){delete[] ptr;}}
+        } memoryGuard;
+        //If thread exits before creating message memory must be freed
+
 
         while(true)
         {
@@ -170,9 +177,9 @@ private:
                 int len = atoi(cur->val);
                 int howMuchMem = len + 20;
 
-                logg << howMuchMem << '\n';
-
                 char* mem4Msg = new char[howMuchMem];
+                memoryGuard.ptr = mem4Msg;
+
                 memcpy(mem4Msg, memoryForStart, curMem - memoryForStart);
 
                 curMem = mem4Msg + (curMem - memoryForStart);
@@ -223,6 +230,7 @@ private:
                 theMessage.recvTime = getCurUTCDateAndTime();
                 theMessage.checkSum = checkSumFromMsg;
 
+                //memoryGuard.ptr = nullptr;
                 theMessage.memory = 
                     std::make_shared<const char*>(theMessage.tagVals[0].val);
                 //Since c++17 calls delete[] on arrays by itself C:

@@ -6,9 +6,16 @@
 int main()
 {
     FIX::Session fixSession;
-    fixSession.start("h18.p.ctrader.com", 5201, "asd", "thisIsATemporaryPassword");
+    if(fixSession.start("h18.p.ctrader.com", 5201, "asd", "thisIsATemporaryPassword"))
+    {
+        logg << "Session started!\n";
+    }
+    else
+    {
+        logg << "Session failed to start!\n";
+    }
 
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::seconds(60));
 
     fixSession.finish();
 

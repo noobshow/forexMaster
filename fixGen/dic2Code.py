@@ -156,10 +156,38 @@ def createCpp(tagNum, tagName, tagType, vals, cpp):
     cpp.write("char " + tagName + "StrBuffInit = (memcpy(" + tagName + "::toStrBuff, \"" + str(tagNum) + r"=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0" + "\", 10), 0);\n")
     cpp.write("\n")
 
-def endCpp(cpp):
+def endCpp(cpp, tagVals):
     cpp.write("std::string toHuman(int tag, const char* val)\n")
     cpp.write("{\n")
-    cpp.write("return \"\";\n")
+    cpp.write(tab+ "std::string res;\n")
+    cpp.write(tab+ "bool foundValue = false;\n")
+    cpp.write(tab+ "switch(tag)\n")
+    cpp.write(tab+ "{\n")
+    
+    for (tagNum, tagName, tagType, vals) in tagVals:
+        cpp.write(tab+ "case FIX::" + tagName + "::tag: {\n")
+        i
+        cpp.write(tab+tab+ "FIX::"+tagName+"::Value value(val);\n")
+
+        cpp.write(tab+tab+ "res = \"" + tagName + " = \";\n")
+
+        if tagType != "MultipleValueString": #unhandled
+            for (valueName, value) in vals:
+                if tagType == "String":
+                    cpp.write(tab+tab+ "if(!strcmp(value.val, FIX::"+tagName+"::val"+valueName+"))\n")
+                else:
+                    cpp.write(tab+tab+ "if(value.val == FIX::"+tagName+"::val"+valueName+")\n")
+                cpp.write(tab+tab+ "{\n")
+                cpp.write(tab+tab+tab+ "foundValue = true;\n")
+                cpp.write(tab+tab+tab+ "res += \"" + valueName + "\";\n")
+                cpp.write(tab+tab+ "}\n")
+        cpp.write(tab+tab+ "if(!foundValue)\n")
+        cpp.write(tab+tab+tab+ "res += val;\n")
+        cpp.write(tab+"}break;\n\n")
+
+    cpp.write("}\n")
+
+    cpp.write("return res;\n")
     cpp.write("}\n")
     cpp.write("} //namespace FIX\n")
 
@@ -174,12 +202,7 @@ dicFilePath = sys.argv[1]
 dicFile = open(dicFilePath, "r")
 dictionary = dicFile.read().split()
 
-hpp = open("src/FIX/genTags.hpp", "w")
-cpp = open("src/FIX/genTags.cpp", "w")
-
-startHpp(hpp)
-startCpp(cpp)
-
+tagVals = []
 
 curDicPos = 0
 while curDicPos < len(dictionary):
@@ -205,9 +228,18 @@ while curDicPos < len(dictionary):
         valName = dictionary[curDicPos]
         curDicPos += 1
         vals += [(valName, val)]
-    
+
+    tagVals += [(tagNum, tagName, tagType, vals)]
+
+hpp = open("src/FIX/genTags.hpp", "w")
+cpp = open("src/FIX/genTags.cpp", "w")
+
+startHpp(hpp)
+startCpp(cpp)
+
+for (tagNum, tagName, tagType, vals) in tagVals:
     createHpp(tagNum, tagName, tagType, vals, hpp)
     createCpp(tagNum, tagName, tagType, vals, cpp)
 
 endHpp(hpp)
-endCpp(cpp)
+endCpp(cpp, tagVals)
