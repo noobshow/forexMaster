@@ -230,9 +230,9 @@ private:
                 theMessage.recvTime = getCurUTCDateAndTime();
                 theMessage.checkSum = checkSumFromMsg;
 
-                //memoryGuard.ptr = nullptr;
+                memoryGuard.ptr = nullptr;
                 theMessage.memory = 
-                    std::make_shared<const char*>(theMessage.tagVals[0].val);
+                    std::make_shared<bool>();
                 //Since c++17 calls delete[] on arrays by itself C:
 
                 mySession->onNewMessage(std::move(theMessage));

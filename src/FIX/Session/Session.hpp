@@ -48,10 +48,11 @@ private:
         Message& operator=(const Message& msg);
         Message& operator=(Message&& msg);
 
-        ~Message(){memory.reset();}
+        ~Message(){if(memory.unique())delete[] tagVals[0].val;}
     private:
         friend Receiver;
-        std::shared_ptr<const char*> memory;
+        std::shared_ptr<bool> memory; 
+        //keeps track of how many copies of this message exist
     };
 
     TCPSocket socket;
@@ -95,7 +96,7 @@ private:
         for(auto& tagVal : msg.tagVals)
             logg << toHuman(tagVal.tag, tagVal.val) << '\n';
         logg << '\n';
-        
+
         recvQueue.emplace_back(std::move(msg));
         newMessage.notify_all();
 
