@@ -62,6 +62,14 @@ private:
             {
                 if(timeToFinish)
                     pthread_exit(0);
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+
+            if(socket.hasDisconnected())
+            {
+                timeToFinish = true;
+                pthread_exit(0);
             }
 
             //Load another chunk of data
