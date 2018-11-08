@@ -60,52 +60,13 @@ private:
 
     TCPSocket socket;
 
-    char* msgBuff; //Send Buffer
-    char* msgContentStart; //Send Buffer after 8=FIX4.4|9=12345|
-
+    char* sendBuff;
+    char* sendBuffContentStart; //Send Buffer after 8=FIX4.4|9=12345|
+    std::mutex sendLock;
+    
     template <class... Args> 
-    void sendMessage(const Args&... tagVals)
-    {
-        char* last = msgContentStart;
-
-        auto addTagVal = [&last](const char* tagVal){
-            last = strcpy(last, tagVal) + strlen(tagVal);
-            *(last++) = FIX::SOH;
-        };
-
-        //Add all user-given tags
-        (... , addTagVal(tagVals));
-        
-        //BodyLen
-        int bodyLen = last-msgContentStart;
-        char bodyLenStr[10];
-        sprintf(bodyLenStr, "%d", bodyLen);
-        int bodyLenStrLen = strlen(bodyLenStr);
-        strcpy(msgContentStart - bodyLenStrLen-1, bodyLenStr);
-        for(char* c = msgContentStart-bodyLenStrLen-2; *c != '='; c--){*c = '0';}
-        *(msgContentStart-1) = FIX::SOH;
-
-        //Checksum
-        int checkSum = 0;
-        for(char* c = msgBuff; c < last; c++)
-            checkSum = (checkSum + *c)%256;
-
-        *(last++) = '1';
-        *(last++) = '0';
-        *(last++) = '=';
-        *(last++) = '0' + (checkSum/100)%10;
-        *(last++) = '0' + (checkSum/10)%10;
-        *(last++) = '0' + (checkSum%10);
-        *(last++) = FIX::SOH;
-        *(last++) = 0;
-
-        socket.send(msgBuff, last-msgBuff);
-
-        logg << "MESSAGE SENT: \n";
-        for(char* c = msgBuff; *c != 0; c++) logg << (*c == FIX::SOH ? '|' : *c); 
-        logg << '\n';
-    }
-
+    void sendMessage(Args&&... tagVals); //TODO - add thread safety
+    // Usage e.g. sendMessage(FIX::MsgType::tagValLogon, FIX::Price::tagVal(40));
 
     Receiver* receiver;
 
@@ -115,22 +76,11 @@ private:
     std::condition_variable newMessage;
     std::mutex newMessageLock;
 
-    void onNewMessage(Message&& msg)
-    {
-        logg << "\nReceived new message!\n";
-        for(auto& tagVal : msg.tagVals)
-            logg << toHuman(tagVal.tag, tagVal.val) << '\n';
-        logg << '\n';
 
-        recvQueueLock.lock();
-        recvQueue.emplace_back(std::move(msg));
-        recvQueueLock.unlock();
+    // Callback called by receiver (from its thread) when new message is received
+    void onNewMessage(Message&& msg);
 
-        newMessageLock.lock();
-        newMessage.notify_all();
-        newMessageLock.unlock();
-    }
-
+    // Waits until specified message arrives
     // evalFunc should return true if message given 
     // is the one we are waiting for
     // false otherwise
@@ -138,79 +88,14 @@ private:
     // nullptr otherwise
     const Message* waitForMessage(int timeoutMS,
                                   const bool (*evalFunc)(const Message& m),
-                                  timePoint fromWhen = clock::now())
-    {
-        const Message* result = nullptr;
-        auto lastProccesedTime = fromWhen;
-
-        recvQueueLock.lock_shared();
-        for(const Message& m : recvQueue)
-        {
-            if(m.recvTime > lastProccesedTime)
-            {
-                if(evalFunc(m))
-                {
-                    result = &m;
-                    break;
-                }
-            }
-            else
-                break;
-        }
-
-        if(!recvQueue.empty())
-            lastProccesedTime = recvQueue.begin()->recvTime;
-        recvQueueLock.unlock_shared();
-        
-        if(result != nullptr)
-            return result;
-
-        auto untilTimeout = clock::now() + std::chrono::milliseconds(timeoutMS);
-        while(true)
-        {
-            //Wait for new messages
-            std::unique_lock<std::mutex> newMessageLockGuard(newMessageLock);
-
-            auto waitRes = newMessage.wait_until(newMessageLockGuard, untilTimeout);
-
-            if(waitRes == std::cv_status::timeout)
-                return nullptr;
-
-            recvQueueLock.lock_shared();
-            newMessageLock.unlock();
-
-            // Check out new messages
-            for(const Message& m : recvQueue)
-            {
-                if(m.recvTime > lastProccesedTime)
-                {
-                    if(evalFunc(m))
-                    {
-                        result = &m;
-                        break;
-                    }
-                }
-                else
-                    break;
-            }
-
-            if(!recvQueue.empty())
-                lastProccesedTime = recvQueue.begin()->recvTime;
-
-            recvQueueLock.unlock_shared();
-        
-            if(result != nullptr)
-                return result;
-        }
-
-        return nullptr;
-    }
+                                  timePoint fromWhen = clock::now());
 
     bool login()
     {
         logg << "Logging in...\n";
 
         auto curTime = FIX::getCurUTCDateAndTime();
+        auto sendTime = clock::now();
 
         sendMessage(
             FIX::MsgType::tagValLogon,
@@ -232,11 +117,60 @@ private:
                 return true;
 
             return false;
-        });
+        },
+        sendTime);
 
         return waitRes != nullptr;
     }
 };
+
+
+    template <class... Args> 
+    void Session::sendMessage(Args&&... tagVals)
+    {
+        std::scoped_lock sendLockGuard(sendLock);
+
+        char* last = sendBuffContentStart;
+
+        auto addTagVal = [&last](const char* tagVal){
+            last = strcpy(last, tagVal) + strlen(tagVal);
+            *(last++) = FIX::SOH;
+        };
+
+        //Add all user-given tags
+        (... , addTagVal(tagVals));
+        
+        //BodyLen
+        int bodyLen = last-sendBuffContentStart;
+        char bodyLenStr[10];
+        sprintf(bodyLenStr, "%d", bodyLen);
+        int bodyLenStrLen = strlen(bodyLenStr);
+        strcpy(sendBuffContentStart - bodyLenStrLen-1, bodyLenStr);
+        for(char* c = sendBuffContentStart-bodyLenStrLen-2; *c != '='; c--){*c = '0';}
+        *(sendBuffContentStart-1) = FIX::SOH;
+
+        //Checksum
+        int checkSum = 0;
+        for(char* c = sendBuff; c < last; c++)
+            checkSum = (checkSum + *c)%256;
+
+        *(last++) = '1';
+        *(last++) = '0';
+        *(last++) = '=';
+        *(last++) = '0' + (checkSum/100)%10;
+        *(last++) = '0' + (checkSum/10)%10;
+        *(last++) = '0' + (checkSum%10);
+        *(last++) = FIX::SOH;
+        *(last++) = 0;
+
+        socket.send(sendBuff, last-sendBuff);
+
+        logg << "MESSAGE SENT: \n";
+        for(char* c = sendBuff; *c != 0; c++) logg << (*c == FIX::SOH ? '|' : *c); 
+        logg << '\n';
+    }
+
+
 
 }
 
