@@ -21,7 +21,13 @@ namespace FIX
         receiver = new Receiver(this, socket);
 
         msgBuff = (char*)malloc(1024*1024); //Messages >1MB are not supported
-        msgContentStart = addTagVal(msgBuff, FIX::BeginString::tagValFIX44, "9=12345");
+        std::string msgBegin;
+        msgBegin += FIX::BeginString::tagValFIX44; 
+        msgBegin += FIX::SOH;
+        msgBegin += "9=12345";
+        msgBegin += FIX::SOH;
+        strcpy(msgBuff, msgBegin.c_str());
+        msgContentStart = msgBuff + msgBegin.size();
 
         return this->login();
     }

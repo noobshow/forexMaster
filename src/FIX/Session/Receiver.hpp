@@ -235,7 +235,7 @@ private:
 
                 Message theMessage;
                 theMessage.tagVals = std::move(curMessage);
-                theMessage.recvTime = getCurUTCDateAndTime();
+                theMessage.recvTime = clock::now();
                 theMessage.checkSum = checkSumFromMsg;
 
                 memoryGuard.ptr = nullptr;
