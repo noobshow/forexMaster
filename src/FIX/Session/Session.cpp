@@ -51,6 +51,7 @@ namespace FIX
         {
             heartbeatThread->join();
             delete heartbeatThread;
+            heartbeatThread = nullptr;
         }
         //Disconnect
     }
@@ -149,7 +150,7 @@ namespace FIX
         return nullptr;
     }
     
-
+//LOGIN
     bool Session::login()
     {
         logg << "Logging in...\n";
@@ -191,41 +192,28 @@ namespace FIX
         }
     }
 
+
+//LOGOUT
     void Session::logout()
     {
-        socket.close(); //lol //TODO
+        socket.close(); //kek //TODO
         //sendMessage();
     }
+    
 
+//HEARTBEAT
     void Session::handleHeartbeat()
     {       
-        timePoint lastHeartbeatTime;
+        timePoint lastHeartbeatTime = clock::now();
+        timePoint lastRecvHeartbeatTime = clock::now();
 
-        //Helper function to send heartbeat
-        auto sendHeartbeat = [this, &lastHeartbeatTime](){
-            auto curTime = FIX::getCurUTCDateAndTime();
-
-            sendMessage(
-                FIX::MsgType::tagValHeartbeat,
-                FIX::SenderCompID::tagVal("fxpig.3001287"),
-                FIX::TargetCompID::tagVal("CSERVER"),
-                FIX::TargetSubID::tagVal("QUOTE"),
-                FIX::SenderSubID::tagVal("QUOTE"),
-                FIX::MsgSeqNum::tagVal(msgSeqNum++),
-                FIX::SendingTime::tagVal(curTime.day, curTime.month, curTime.year, curTime.hour, curTime.minute, curTime.second)
-            );
-
-            lastHeartbeatTime = clock::now();
-        };
-
-        // Send first heartbeat just to set lastHeartbeatTime
-        sendHeartbeat();
 
         while(!isTimeToStop) //Session finishing
         {
             // Wait for possible TestRequestMesages
-            auto waitRes = waitForMessage(500, [](const Message& msg)->const bool{
-                if(!strcmp(msg.tagVals[2].val, FIX::MsgType::valTestRequest))
+            const Message* waitRes = waitForMessage(500, [](const Message& msg)->const bool{
+                if(!strcmp(msg.tagVals[2].val, FIX::MsgType::valTestRequest)
+                || !strcmp(msg.tagVals[2].val, FIX::MsgType::valHeartbeat))
                     return true;
                 else
                     return false;
@@ -234,10 +222,74 @@ namespace FIX
             if(isTimeToStop)
                 return;
 
-            if(std::chrono::duration<float>(clock::now() - lastHeartbeatTime).count() >= heartbeatFrequency
-            || waitRes != nullptr) //testRequest
+
+            auto curTime = FIX::getCurUTCDateAndTime();
+
+            //If received TestRequest answer it
+            if(waitRes != nullptr && !strcmp(waitRes->tagVals[2].val, FIX::MsgType::valTestRequest))
             {
-                sendHeartbeat();
+                const char* testReqID = "error_not_found";
+                for(auto tagVal : waitRes->tagVals)
+                if(tagVal.tag == FIX::TestReqID::tag)
+                {
+                    testReqID = tagVal.val;
+                    break;
+                }
+
+                sendMessage(
+                    FIX::MsgType::tagValHeartbeat,
+                    FIX::SenderCompID::tagVal("fxpig.3001287"),
+                    FIX::TargetCompID::tagVal("CSERVER"),
+                    FIX::TargetSubID::tagVal("QUOTE"),
+                    FIX::SenderSubID::tagVal("QUOTE"),
+                    FIX::MsgSeqNum::tagVal(msgSeqNum++),
+                    FIX::SendingTime::tagVal(curTime.day, curTime.month, curTime.year, curTime.hour, curTime.minute, curTime.second),
+                    FIX::TestReqID::tagVal(testReqID)
+                );
+
+                lastHeartbeatTime = clock::now();
+            }
+
+            if(waitRes != nullptr && !strcmp(waitRes->tagVals[2].val, FIX::MsgType::valHeartbeat))
+            {
+                lastRecvHeartbeatTime = clock::now();
+            }
+
+            //If its time to send heartbeat do it
+            if(std::chrono::duration<float>(clock::now() - lastHeartbeatTime).count() >= heartbeatFrequency)
+            {
+                sendMessage(
+                    FIX::MsgType::tagValHeartbeat,
+                    FIX::SenderCompID::tagVal("fxpig.3001287"),
+                    FIX::TargetCompID::tagVal("CSERVER"),
+                    FIX::TargetSubID::tagVal("QUOTE"),
+                    FIX::SenderSubID::tagVal("QUOTE"),
+                    FIX::MsgSeqNum::tagVal(msgSeqNum++),
+                    FIX::SendingTime::tagVal(curTime.day, curTime.month, curTime.year, curTime.hour, curTime.minute, curTime.second)
+                );
+
+                lastHeartbeatTime = clock::now();
+            }
+
+            //If server didnt send heartbeat in time send TestRequest
+            if(std::chrono::duration<float>(clock::now() - lastRecvHeartbeatTime).count() > heartbeatFrequency+1)
+            {
+                sendMessage(
+                    FIX::MsgType::tagValTestRequest,
+                    FIX::SenderCompID::tagVal("fxpig.3001287"),
+                    FIX::TargetCompID::tagVal("CSERVER"),
+                    FIX::TargetSubID::tagVal("QUOTE"),
+                    FIX::SenderSubID::tagVal("QUOTE"),
+                    FIX::MsgSeqNum::tagVal(msgSeqNum++),
+                    FIX::SendingTime::tagVal(curTime.day, curTime.month, curTime.year, curTime.hour, curTime.minute, curTime.second),
+                    FIX::TestReqID::tagVal("TEST")
+                );
+            }
+            
+            //If last heartbeat was twice the frequency then connection is down -> finish
+            if(std::chrono::duration<float>(clock::now() - lastRecvHeartbeatTime).count() > 2*heartbeatFrequency)
+            {
+                isTimeToStop = true;
             }
         }
     }

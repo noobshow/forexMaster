@@ -12,7 +12,6 @@ public:
         recvBuffPos = buff;
         recvBuffEnd = buff;
 
-        timeToFinish = false;
         receiveThread = new std::thread([this](){this->receive();});
     }
 
@@ -20,7 +19,7 @@ public:
     {
         if(receiveThread != nullptr)
         {
-            timeToFinish = true;
+            mySession->isTimeToStop = true;
             receiveThread->join();
             delete receiveThread;
             receiveThread = nullptr;
@@ -42,7 +41,6 @@ private:
     static constexpr const int buffSize = 1024;
 
     std::thread* receiveThread;
-    std::atomic<bool> timeToFinish;
 
     //Get next char from tcp stream
     char getNextChar();

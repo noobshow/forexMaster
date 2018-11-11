@@ -14,7 +14,7 @@ namespace FIX
             {
                 //Check if thread should exit
                 //Checking it here allows to minize checks while still exiting pretty fast
-                if(timeToFinish)
+                if(mySession->isTimeToStop)
                     pthread_exit(0); //imho the most convienient way to exit x.x
 
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -23,7 +23,7 @@ namespace FIX
             if(socket.hasDisconnected())
             {
                 logg << "Server disconnected!\n";
-                timeToFinish = true;
+                mySession->isTimeToStop= true;
                 pthread_exit(0);
             }
 
