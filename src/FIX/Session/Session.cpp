@@ -39,7 +39,15 @@ namespace FIX
 
     void Session::finish()
     {
-        //Logout
+        static bool loginSent = false;
+
+        if(!socket.hasDisconnected() && !loginSent)
+        {
+            logout();
+            socket.close();
+            loginSent = true;
+        }
+
         isTimeToStop = true;
         if(receiver != nullptr)
         {
@@ -53,7 +61,6 @@ namespace FIX
             delete heartbeatThread;
             heartbeatThread = nullptr;
         }
-        //Disconnect
     }
 
     Session::~Session()
@@ -181,12 +188,13 @@ namespace FIX
         },
         sendTime);
 
-        if(waitRes == nullptr)
+        if(waitRes == nullptr) //no response
         {
             return false;
         }
         else
         {
+            //start heartbeat handling
             heartbeatThread = new std::thread([this](){this->handleHeartbeat();});
             return true;
         }
@@ -196,10 +204,19 @@ namespace FIX
 //LOGOUT
     void Session::logout()
     {
-        socket.close(); //kek //TODO
-        //sendMessage();
+        auto curTime = FIX::getCurUTCDateAndTime();
+
+        sendMessage(
+            FIX::MsgType::tagValLogout,
+            FIX::SenderCompID::tagVal("fxpig.3001287"),
+            FIX::TargetCompID::tagVal("CSERVER"),
+            FIX::TargetSubID::tagVal("QUOTE"),
+            FIX::SenderSubID::tagVal("QUOTE"),
+            FIX::MsgSeqNum::tagVal(msgSeqNum++),
+            FIX::SendingTime::tagVal(curTime.day, curTime.month, curTime.year, curTime.hour, curTime.minute, curTime.second)
+        );
     }
-    
+
 
 //HEARTBEAT
     void Session::handleHeartbeat()

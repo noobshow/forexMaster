@@ -15,7 +15,7 @@ int main()
         logg << "Session failed to start!\n";
     }
 
-    std::this_thread::sleep_for(std::chrono::seconds(600));
+    std::this_thread::sleep_for(std::chrono::seconds(120));
 
     fixSession.finish();
 
