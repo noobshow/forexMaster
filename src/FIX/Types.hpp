@@ -34,19 +34,22 @@ namespace Types
 
     inline void fromString(const char* str, Data& data)
     {
-        abort(); //I have no idea how to parse it yet
+        abort(); // <- this has to done in a different way
     }
+    
     inline void fromString(const char* str, Date& date)
     {
         date.year = 1000*(str[0]-'0') + 100*(str[1]-'0') + 10*(str[2]-'0') + (str[3]-'0');
         date.month = 10*(str[4]-'0') + (str[5]-'0');
         date.day = 10*(str[6]-'0') + (str[7]-'0');
     }
+
     inline void fromString(const char* str, MonthYear& monthYear)
     {
         monthYear.year = 1000*(str[0]-'0') + 100*(str[1]-'0') + 10*(str[2]-'0') + (str[3]-'0');
         monthYear.month = 10*(str[4]-'0') + (str[5]-'0');
     }
+
     inline void fromString(const char* str, Time& time)
     {
         time.hour = 10*(str[0]-'0')+(str[1]-'0');
@@ -57,6 +60,7 @@ namespace Types
         else
             time.millisec = 0;
     }
+
     inline void fromString(const char* str, DateAndTime& dateAndTime)
     {
         fromString(str, (Date&)dateAndTime);
@@ -95,6 +99,7 @@ namespace Types
         str[7] = '0'+(date.day)%10;
         return str+8;
     }
+
     inline char* writeThere(char* str, MonthYear monthYear)
     {
         str[0] = '0'+(monthYear.year/1000)%10;
@@ -105,6 +110,7 @@ namespace Types
         str[5] = '0'+(monthYear.month)%10;
         return str+6;
     }
+
     inline char* writeThere(char* str, Time time)
     { //YYYYMMDD-HH:MM:SS.sss
         str[0] = '0'+(time.hour/10)%10;

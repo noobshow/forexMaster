@@ -24,6 +24,7 @@ public:
     ~Session();
 
 private:
+//Basic session functionality
     using clock = std::chrono::system_clock;
     using timePoint = std::chrono::system_clock::time_point;
 
@@ -60,14 +61,16 @@ private:
 
     TCPSocket socket;
 
+//Sending
     char* sendBuff;
     char* sendBuffContentStart; //Send Buffer after 8=FIX4.4|9=12345|
     std::mutex sendLock;
     
     template <class... Args> 
-    void sendMessage(Args&&... tagVals); //TODO - add thread safety
+    void sendMessage(Args&&... tagVals);
     // Usage e.g. sendMessage(FIX::MsgType::tagValLogon, FIX::Price::tagVal(40));
 
+//Receiving
     Receiver* receiver;
 
     std::list<Message> recvQueue; // <- probably could be fixed size queue for speed without realloc
@@ -75,7 +78,6 @@ private:
 
     std::condition_variable newMessage;
     std::mutex newMessageLock;
-
 
     // Callback called by receiver (from its thread) when new message is received
     void onNewMessage(Message&& msg);
@@ -90,38 +92,17 @@ private:
                                   const bool (*evalFunc)(const Message& m),
                                   timePoint fromWhen = clock::now());
 
-    bool login()
-    {
-        logg << "Logging in...\n";
+//Session handling
+    std::atomic<bool> isTimeToStop; // <- to stop threads
 
-        auto curTime = FIX::getCurUTCDateAndTime();
-        auto sendTime = clock::now();
+    std::atomic<int> msgSeqNum;
 
-        sendMessage(
-            FIX::MsgType::tagValLogon,
-            FIX::SenderCompID::tagVal("fxpig.3001287"),
-            FIX::TargetCompID::tagVal("CSERVER"),
-            FIX::TargetSubID::tagVal("QUOTE"),
-            FIX::SenderSubID::tagVal("QUOTE"),
-            FIX::MsgSeqNum::tagVal(1),
-            FIX::SendingTime::tagVal(curTime.day, curTime.month, curTime.year, curTime.hour, curTime.minute, curTime.second),
-            FIX::EncryptMethod::tagValNoneOrOther,
-            FIX::HeartBtInt::tagVal(30),
-            FIX::ResetSeqNumFlag::tagValYesResetSequenceNumbers,
-            FIX::Username::tagVal("3001287"),
-            FIX::Password::tagVal("thisIsATemporaryPassword1337")
-        );
+    bool login();
+    void logout();
 
-        const Message*  waitRes = waitForMessage(500, [](const Message& m)->const bool{
-            if(strcmp(m.tagVals[2].val, FIX::MsgType::valLogon) == 0)
-                return true;
-
-            return false;
-        },
-        sendTime);
-
-        return waitRes != nullptr;
-    }
+    std::thread* heartbeatThread; // handleHeartbeat()
+    int heartbeatFrequency;
+    void handleHeartbeat();
 };
 
 
