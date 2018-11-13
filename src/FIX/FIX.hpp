@@ -2,7 +2,7 @@
 
 #include "Types.hpp"
 #include "Tags.hpp"
-#include "Session/Session.hpp"
+#include "Session/QuoteSession.hpp"
 
 namespace FIX
 {

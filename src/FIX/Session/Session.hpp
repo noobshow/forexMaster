@@ -17,14 +17,12 @@ class Session
 {
 public:
     Session();
-    
-    bool start(const char* serverHostName, int port, const char* login, const char* password);
-    void finish();
 
+    void finish();
     ~Session();
 
-private:
-//Basic session functionality
+protected:
+//Basic Session functionality
     using clock = std::chrono::system_clock;
     using timePoint = std::chrono::system_clock::time_point;
 
@@ -100,13 +98,6 @@ private:
     std::atomic<bool> isTimeToStop; // <- to stop threads and session
 
     std::atomic<int> msgSeqNum;
-
-    bool login();
-    void logout();
-
-    std::thread* heartbeatThread; // handleHeartbeat()
-    int heartbeatFrequency;
-    void handleHeartbeat();
 };
 
 

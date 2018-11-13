@@ -1,11 +1,10 @@
 #include <thread>
 #include <Logger.hpp>
-#include <FIX/Tags.hpp>
-#include <FIX/Session/Session.hpp>
+#include <FIX/FIX.hpp>
 
 int main()
 {
-    FIX::Session fixSession;
+    FIX::QuoteSession fixSession;
     if(fixSession.start("h18.p.ctrader.com", 5201, "asd", "thisIsATemporaryPassword"))
     {
         logg << "Session started!\n";
