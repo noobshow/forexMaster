@@ -1,6 +1,6 @@
 #pragma once
-#include "../Tags.hpp"
 #include "TCPSocket.hpp"
+#include "../Types.hpp"
 #include <Logger.hpp>
 #include <list>
 #include <thread>
@@ -50,13 +50,12 @@ private:
         Message(Message&& msg);
         Message& operator=(const Message& msg);
         Message& operator=(Message&& msg); //to avoid unnecesary copying
-
         ~Message(){if(memory.unique())delete[] tagVals[0].val;}
     private:
         friend Receiver;
         std::shared_ptr<bool> memory; 
         //keeps track of how many copies of this message exist
-        //this is ugly will be handled better in the future
+        //this is ugly will be handled better in the future //TODO
     };
 
     TCPSocket socket;
@@ -70,10 +69,15 @@ private:
     void sendMessage(Args&&... tagVals);
     // Usage e.g. sendMessage(FIX::MsgType::tagValLogon, FIX::Price::tagVal(40));
 
+    //helpers for sendMessage
+    void addTagVal(const char* tagVal, char*& last);
+    template <class T>
+    void addTagVal(const writeableTagVal<T>& writeableTagVal, char*& last);
+
 //Receiving
     Receiver* receiver;
 
-    std::list<Message> recvQueue; // <- probably could be fixed size queue for speed without realloc
+    std::list<Message> recvQueue; // <- probably could be fixed size queue for speed without realloc //TODO
     std::shared_mutex recvQueueLock;
 
     std::condition_variable newMessage;
@@ -93,7 +97,7 @@ private:
                                   timePoint fromWhen = clock::now());
 
 //Session handling
-    std::atomic<bool> isTimeToStop; // <- to stop threads
+    std::atomic<bool> isTimeToStop; // <- to stop threads and session
 
     std::atomic<int> msgSeqNum;
 
@@ -106,20 +110,22 @@ private:
 };
 
 
+    //Template funcs definitions
+    template <class T>
+    void Session::addTagVal(const writeableTagVal<T>& writeableTagVal, char*& last){
+        last = writeableTagVal.writeThere(last);
+    };
+
+
     template <class... Args> 
-    void Session::sendMessage(Args&&... tagVals)
+    void FIX::Session::sendMessage(Args&&... tagVals)
     {
         std::scoped_lock sendLockGuard(sendLock);
 
         char* last = sendBuffContentStart;
 
-        auto addTagVal = [&last](const char* tagVal){
-            last = strcpy(last, tagVal) + strlen(tagVal);
-            *(last++) = FIX::SOH;
-        };
-
         //Add all user-given tags
-        (... , addTagVal(tagVals));
+        (... , addTagVal(tagVals, last));
         
         //BodyLen
         int bodyLen = last-sendBuffContentStart;
@@ -150,8 +156,5 @@ private:
         for(char* c = sendBuff; *c != 0; c++) logg << (*c == FIX::SOH ? '|' : *c); 
         logg << '\n';
     }
-
-
-
-}
+}//namespace FIX
 

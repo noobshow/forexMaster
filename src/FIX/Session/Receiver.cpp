@@ -1,4 +1,5 @@
 #include "Session.hpp"
+#include "../Tags.hpp"
 
 namespace FIX
 {

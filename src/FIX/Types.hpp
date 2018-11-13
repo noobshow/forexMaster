@@ -1,154 +1,81 @@
 #pragma once
-
-#include <cstdio>
 #include <cstring>
-#include <cstdlib>
-#include <string>
 
 namespace FIX{
-namespace Types
-{
+    //Possible types in val field of tag-val 
     using Boolean = bool;
     using Char = char;
     using Int = int;
     using Float = float;
     using String = const char*;
-    struct Data; //Raw data pointer and size
-    struct Date; //YYYYMMDD
-    struct MonthYear; //YYYYMM
-    struct Time; //HH:MM:SS or HH:MM:SS.sss
-    struct DateAndTime; //YYYYMMDD-HH:MM:SS or YYYYMMDD-HH:MM:SS.sss
-    struct MultipleValueString;
 
-    inline void fromString(const char* str, Boolean& b){b = (str[0] == 'Y');}
-    inline void fromString(const char* str, Char& c){c = str[0];}
-    inline void fromString(const char* str, Int& i){i = atoi(str);}
-    inline void fromString(const char* str, Float& f){f = atof(str);}
-    inline void fromString(const char* str, String& theStr){theStr = str;}
+    struct MonthYear {unsigned short year, month; };
+    struct Date : MonthYear {unsigned short day; };
+    struct Time {int hour, minute, second, millisec; };
+    struct DateAndTime : Date, Time {};
 
-    struct Data {void* ptr; unsigned size;};
-    struct MonthYear {unsigned short year, month;    bool operator<(const MonthYear& b) const;};
-    struct Date : MonthYear {unsigned short day;     bool operator<(const Date& b) const;};
-    struct Time {int hour, minute, second, millisec; bool operator<(const Time& b) const; };
-    struct DateAndTime : Date, Time {                bool operator<(const DateAndTime& b) const;};
+    struct Data {void* ptr; unsigned size;}; // Raw Data
 
-    inline void fromString(const char* str, Data& data)
+    struct MulValString{}; //Not implemented yet
+
+
+    //Parses data from c-string
+    Boolean     boolOfStr(const char*);
+    Char        charOfStr(const char*);
+    Int         intOfStr(const char*);
+    Float       floatOfStr(const char*);
+    String      stringOfStr(const char*); // <- actually useless but kept for consistency 
+    MonthYear   monthYearOfStr(const char*);
+    Date        dateOfStr(const char*);
+    Time        timeOfStr(const char*);
+    DateAndTime dateAndTimeOfStr(const char*);
+
+    MulValString mulValStrOfStr(const char*) = delete; // MulValString not implemented yet
+
+    //Writes data to specified str and returns pointer to after-last character
+    char* writeThere(char* str, Char c);
+    char* writeThere(char* str, Int i);
+    char* writeThere(char* str, Float f);
+    char* writeThere(char* str, const char* theStr);
+    char* writeThere(char* str, const char* theStr, unsigned size); //better preformance (?)
+    char* writeThere(char* str, Data data);
+    char* writeThere(char* str, Date date);
+    char* writeThere(char* str, MonthYear monthYear);
+    char* writeThere(char* str, Time time);
+    char* writeThere(char* str, DateAndTime dateAndTime);
+    char* writeThere(char* str, const MulValString&); //not handled yet
+
+    // Current time and date getters
+    Date getDate();
+    Time getTime();
+    DateAndTime getDateAndTime();
+
+    Date geUTCDate();
+    Time getUTCTime();
+    DateAndTime getUTCDateAndTime();
+
+    //These are returned by Tags structs when asked for specific tagValue
+    //See session for exampe use
+    extern char SOH;
+
+    template <class T>
+    struct writeableTagVal
     {
-        abort(); // <- this has to done in a different way
-    }
-    
-    inline void fromString(const char* str, Date& date)
-    {
-        date.year = 1000*(str[0]-'0') + 100*(str[1]-'0') + 10*(str[2]-'0') + (str[3]-'0');
-        date.month = 10*(str[4]-'0') + (str[5]-'0');
-        date.day = 10*(str[6]-'0') + (str[7]-'0');
-    }
+        writeableTagVal(const char* tagInStr, int tagStrLen, T val) 
+        : tag(tagInStr), tagLen(tagStrLen), value(val)
+        {}
 
-    inline void fromString(const char* str, MonthYear& monthYear)
-    {
-        monthYear.year = 1000*(str[0]-'0') + 100*(str[1]-'0') + 10*(str[2]-'0') + (str[3]-'0');
-        monthYear.month = 10*(str[4]-'0') + (str[5]-'0');
-    }
+        const char* tag = "123";
+        int tagLen;
+        T value;
 
-    inline void fromString(const char* str, Time& time)
-    {
-        time.hour = 10*(str[0]-'0')+(str[1]-'0');
-        time.minute = 10*(str[3]-'0')+(str[4]-'0');
-        time.second = 10*(str[6]-'0')+(str[7]-'0');
-        if(str[8] == '.')
-            time.millisec = 100*(str[9]-'0') + 10*(str[10]-'0') + (str[11]-'0');
-        else
-            time.millisec = 0;
-    }
-
-    inline void fromString(const char* str, DateAndTime& dateAndTime)
-    {
-        fromString(str, (Date&)dateAndTime);
-        fromString(str+8, (Time&)dateAndTime);
-    }
-
-    struct MultipleValueString
-    {
-        
-    };
-
-    inline void fromString(const char* str, MultipleValueString& m)
-    {}
-
-    template <class T> 
-    struct Value
-    {
-        Value(const char* str) {fromString(str, val);}
-        T val;
-    };
-
-    inline char* writeThere(char* str, Char c){*str = c; return str+1;}
-    inline char* writeThere(char* str, Int i){return str+sprintf(str, "%d", i);}
-    inline char* writeThere(char* str, Float f){return str+sprintf(str, "%f", f);}
-    inline char* writeThere(char* str, String theStr, unsigned size){strcpy(str, theStr); return str+size;}
-    inline char* writeThere(char* str, Data data){return str;}
-    inline char* writeThere(char* str, Date date)
-    {
-        str[0] = '0'+(date.year/1000)%10;
-        str[1] = '0'+(date.year/100)%10;
-        str[2] = '0'+(date.year/10)%10;
-        str[3] = '0'+(date.year)%10;
-        str[4] = '0'+(date.month/10)%10;
-        str[5] = '0'+(date.month)%10;
-        str[6] = '0'+(date.day/10)%10;
-        str[7] = '0'+(date.day)%10;
-        return str+8;
-    }
-
-    inline char* writeThere(char* str, MonthYear monthYear)
-    {
-        str[0] = '0'+(monthYear.year/1000)%10;
-        str[1] = '0'+(monthYear.year/100)%10;
-        str[2] = '0'+(monthYear.year/10)%10;
-        str[3] = '0'+(monthYear.year)%10;
-        str[4] = '0'+(monthYear.month/10)%10;
-        str[5] = '0'+(monthYear.month)%10;
-        return str+6;
-    }
-
-    inline char* writeThere(char* str, Time time)
-    { //YYYYMMDD-HH:MM:SS.sss
-        str[0] = '0'+(time.hour/10)%10;
-        str[1] = '0'+(time.hour)%10;
-        str[2] = ':';
-        str[3] = '0'+(time.minute/10)%10;
-        str[4] = '0'+(time.minute)%10;
-        str[5] = ':';
-        str[6] = '0'+(time.second/10)%10;
-        str[7] = '0'+(time.second)%10;
-
-        if(time.millisec != 0)
-        {
-            str[8] = '.';
-            str[9] = '0'+(time.millisec/100)%10;
-            str[10] = '0'+(time.millisec/10)%10;
-            str[11] = '0'+(time.millisec)%10;
-            return str+12;
+        char* writeThere(char* where) const {
+            strcpy(where, tag);
+            where += tagLen;
+            *(where++) = '=';
+            where = FIX::writeThere(where, value);
+            *(where++) = FIX::SOH;
+            return where;
         }
-        else
-        {
-            str[8] = 0;
-            return str+8;
-        }
-    }
-    inline char* writeThere(char* str, DateAndTime dateAndTime)
-    {
-        auto dateEnd = writeThere(str, (Date&)dateAndTime);
-        *dateEnd = '-';
-        return writeThere(dateEnd+1, (Time&)dateAndTime);
-    }
-} //namespace Types
-
-Types::Date getCurDate();
-Types::Time getCurTime();
-Types::DateAndTime getCurDateAndTime();
-
-Types::Date getCurUTCDate();
-Types::Time getCurUTCTime();
-Types::DateAndTime getCurUTCDateAndTime();
+    };
 } //namespace FIX

@@ -23,7 +23,7 @@ realType = {
 "Exchange" : "String",
 "LocalMktDate" : "Date",
 "month-year" : "MonthYear",
-"MultipleValueString" : "MultipleValueString",
+"MultipleValueString" : "MulValString",
 "UTCDateOnly" : "Date",
 "UTCTimeOnly" : "Time",
 "UTCTimestamp" : "DateAndTime"
@@ -34,79 +34,46 @@ tab = "  "
 
 #HPP
 def startHpp(hpp):
+    hpp.write("#pragma once\n\n")
     hpp.write("#include <string>\n")
+    hpp.write("#include \"Types.hpp\"\n")
     hpp.write("\n")
     hpp.write("namespace FIX\n")
     hpp.write("{\n")
-    hpp.write(tab+"std::string toHuman(int tag, const char* val);\n")
+    hpp.write("std::string toHuman(int tag, const char* val);\n\n")
 
 def createHpp(tagNum, tagName, tagType, vals, hpp):
         #Beggining of the class
-        hpp.write("struct " + tagName + " : Types::Value<Types::" + tagType + ">\n")
+        hpp.write("struct " + tagName + "\n")
         hpp.write("{\n")
         hpp.write(tab + "constexpr static const int tag = " + tagNum + ";\n")
         hpp.write(tab + "constexpr static const char* name = \"" + tagName + "\";\n")
         hpp.write("\n")
 
-        #static const char* tagVal(value...)
-        hpp.write(tab + "static const char* tagVal(")
-        if tagType == "Boolean":
-            hpp.write("bool b")
-        if tagType == "Char":
-            hpp.write("char c")
-        if tagType == "Int":
-            hpp.write("int i")
-        if tagType == "Float":
-            hpp.write("float f")
-        if tagType == "String":
-            hpp.write("const char* str")
-        if tagType == "Data":
-            hpp.write("void* data, unsigned size")
-        if tagType == "Date":
-            hpp.write("int day, int month, int year")
-        if tagType == "MonthYear":
-            hpp.write("int month, int year")
-        if tagType == "Time":
-            hpp.write("int hour, int minute, int second, int millisec = 0")
-        if tagType == "DateAndTime":
-            hpp.write("int day, int month, int year" + ", " +  "int hour, int minute, int second, int millisec = 0")
-        hpp.write(")\n")
-        hpp.write(tab + "{\n")
-        if tagType != "Data" and tagType != "MultipleValueString": #unhandled types
-            hpp.write(tab+tab+ "char* whereWrite = toStrBuff + " + str(len(tagNum)+1) + ";\n") 
-
-        if tagType == "Boolean":
-            hpp.write(tab+tab + "Types::writeThere(whereWrite, b);\n")
-        if tagType == "Char":
-            hpp.write(tab+tab + "Types::writeThere(whereWrite, c);\n")
-        if tagType == "Int":
-            hpp.write(tab+tab + "Types::writeThere(whereWrite, i);\n")
-        if tagType == "Float":
-            hpp.write(tab+tab + "Types::writeThere(whereWrite, f);\n")
-        if tagType == "String":
-            hpp.write(tab+tab + "Types::writeThere(whereWrite, str, 0);\n")
-        #if(tagType == "Data"):
-
-        if tagType == "Date":
-            hpp.write(tab+tab + "Types::Date date; date.year = year; date.month = month; date.day = day;\n")
-            hpp.write(tab+tab + "Types::writeThere(whereWrite, date);\n")
-  
-        if tagType == "MonthYear":
-            hpp.write(tab+tab + "Types::MonthYear monthYear; monthYear.year = year; monthYear.month = month;\n")
-            hpp.write(tab+tab + "Types::writeThere(whereWrite, monthYear);\n")
-        if tagType == "Time":
-            hpp.write(tab+tab + "Types::Time time; time.hour = hour; time.minute = minute; time.second = second; time.millisec = millisec;\n")
-            hpp.write(tab+tab + "Types::writeThere(whereWrite, time);\n")
-        if tagType == "DateAndTime":
-            hpp.write(tab+tab + "Types::DateAndTime dateAndTime; ")
-            hpp.write(tab+tab + "Types::Date& date = dateAndTime; ")
-            hpp.write(tab+tab + "Types::Time& time = dateAndTime;\n")
-            hpp.write(tab+tab + "date.year = year; date.month = month; date.day = day;\n")
-            hpp.write(tab+tab + "time.hour = hour; time.minute = minute; time.second = second; time.millisec = millisec;\n")
-            hpp.write(tab+tab + "Types::writeThere(whereWrite, dateAndTime);\n")
-        hpp.write(tab+tab+ "return toStrBuff;\n")
-        hpp.write(tab + "}\n")
-        
+        if tagType != "MulValStr":
+            hpp.write(tab + "static writeableTagVal<" + tagType + "> tagVal(")
+            if tagType == "Boolean":
+                hpp.write("bool data")
+            if tagType == "Char":
+                hpp.write("char data")
+            if tagType == "Int":
+                hpp.write("int data")
+            if tagType == "Float":
+                hpp.write("float data")
+            if tagType == "String":
+                hpp.write("const char* data")
+            if tagType == "Data":
+                hpp.write("Data data")
+            if tagType == "Date":
+                hpp.write("Date data")
+            if tagType == "MonthYear":
+                hpp.write("MonthYear data")
+            if tagType == "Time":
+                hpp.write("Time data")
+            if tagType == "DateAndTime":
+                hpp.write("DateAndTime data")
+            hpp.write(");\n")
+            
         #Possible values
         if len(vals) > 0:
             hpp.write("\n")
@@ -119,9 +86,8 @@ def createHpp(tagNum, tagName, tagType, vals, hpp):
                 hpp.write(tab + "constexpr static const int val" + valName + " = " + val + ";\n")
             if tagType == "Float":
                 hpp.write(tab + "constexpr static const float val" + valName + " = " + val + ";\n")
-            if tagType == "String":
+            if tagType == "String" or tagType == "MulValString":
                 hpp.write(tab + "constexpr static const char* val" + valName + " = " + "\"" + val + "\";\n")
-            #if(tagType == "Data"):
 
         #Possible tag+val values
         if len(vals) > 0:
@@ -130,11 +96,6 @@ def createHpp(tagNum, tagName, tagType, vals, hpp):
             hpp.write(tab+ "constexpr static const char* tagVal" + valName + " = \"" + tagNum + "=" + val + "\";\n")
 
         hpp.write("\n")
-        #Value constructor
-        hpp.write(tab+"using Types::Value<Types::" + tagType + ">::Value;\n")
-        hpp.write("\n")
-        #Buffer used to create tagVal
-        hpp.write(tab+"static char toStrBuff[];\n")
         hpp.write("};\n")
         hpp.write("\n")
 
@@ -152,9 +113,38 @@ def startCpp(cpp):
     cpp.write("{\n")
 
 def createCpp(tagNum, tagName, tagType, vals, cpp):
-    cpp.write("char " + tagName + "::toStrBuff[1024];\n")
-    cpp.write("char " + tagName + "StrBuffInit = (memcpy(" + tagName + "::toStrBuff, \"" + str(tagNum) + r"=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0" + "\", 10), 0);\n")
-    cpp.write("\n")
+    if tagType != "MulValStr":
+        cpp.write(tab + "writeableTagVal<" + tagType + "> " + tagName + "::tagVal(")
+        if tagType == "Boolean":
+            cpp.write("bool data")
+        if tagType == "Char":
+            cpp.write("char data")
+        if tagType == "Int":
+            cpp.write("int data")
+        if tagType == "Float":
+            cpp.write("float data")
+        if tagType == "String":
+            cpp.write("const char* data")
+        if tagType == "Data":
+            cpp.write("Data data")
+        if tagType == "Date":
+            cpp.write("Date data")
+        if tagType == "MonthYear":
+            cpp.write("MonthYear data")
+        if tagType == "Time":
+            cpp.write("Time data")
+        if tagType == "DateAndTime":
+            cpp.write("DateAndTime data")
+        cpp.write(")\n")
+        cpp.write(tab + "{\n")
+
+        if tagType != "MulValString":
+            cpp.write(tab+tab+ "return writeableTagVal<" + tagType + ">(\"")
+            cpp.write(tagNum+ "\", " + str(len(tagNum)) + ", data);\n")
+        cpp.write(tab + "}\n")
+    cpp.write('\n')
+
+    
 
 def endCpp(cpp, tagVals):
     cpp.write("std::string toHuman(int tag, const char* val)\n")
@@ -166,17 +156,30 @@ def endCpp(cpp, tagVals):
     
     for (tagNum, tagName, tagType, vals) in tagVals:
         cpp.write(tab+ "case FIX::" + tagName + "::tag: {\n")
-        i
-        cpp.write(tab+tab+ "FIX::"+tagName+"::Value value(val);\n")
+        
+
+        if len(vals) > 0:
+            if tagType == "Boolean":
+                cpp.write(tab+tab+ "FIX::Boolean value = boolOfStr(val);\n")
+            if tagType == "Char":
+                cpp.write(tab+tab+ "FIX::Char value = charOfStr(val);\n")
+            if tagType == "Int":
+                cpp.write(tab+tab+ "FIX::Int value = intOfStr(val);\n")
+            if tagType == "Float":
+                cpp.write(tab+tab+ "FIX::Float value = floatOfStr(val);\n")
+            if tagType == "String":
+                cpp.write(tab+tab+ "FIX::String value = stringOfStr(val);\n")
+            #if tagType == "MulValString":
+                
 
         cpp.write(tab+tab+ "res = \"" + tagName + " = \";\n")
 
-        if tagType != "MultipleValueString": #unhandled
+        if tagType != "MulValString": #unhandled
             for (valueName, value) in vals:
                 if tagType == "String":
-                    cpp.write(tab+tab+ "if(!strcmp(value.val, FIX::"+tagName+"::val"+valueName+"))\n")
+                    cpp.write(tab+tab+ "if(!strcmp(value, FIX::"+tagName+"::val"+valueName+"))\n")
                 else:
-                    cpp.write(tab+tab+ "if(value.val == FIX::"+tagName+"::val"+valueName+")\n")
+                    cpp.write(tab+tab+ "if(value == FIX::"+tagName+"::val"+valueName+")\n")
                 cpp.write(tab+tab+ "{\n")
                 cpp.write(tab+tab+tab+ "foundValue = true;\n")
                 cpp.write(tab+tab+tab+ "res += \"" + valueName + "\";\n")
@@ -231,8 +234,15 @@ while curDicPos < len(dictionary):
 
     tagVals += [(tagNum, tagName, tagType, vals)]
 
-hpp = open("src/FIX/genTags.hpp", "w")
-cpp = open("src/FIX/genTags.cpp", "w")
+hpp = open("src/FIX/Tags.hpp", "w")
+cpp = open("src/FIX/Tags.cpp", "w")
+
+welcomeMessage = """
+// This file has been automatically generated via fixGen/dic2Code.py
+// On base of """ + dicFilePath + " fix dictionary\n"; 
+
+hpp.write(welcomeMessage)
+cpp.write(welcomeMessage)
 
 startHpp(hpp)
 startCpp(cpp)

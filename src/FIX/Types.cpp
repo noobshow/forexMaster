@@ -1,100 +1,173 @@
 #include "Types.hpp"
-#include <ctime>
-#include <chrono>
 
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <string>
+#include <chrono>
 
 namespace FIX
 {
-    namespace Types
+    Boolean boolOfStr(const char* str){
+        return (str[0] == 'Y');
+    }
+
+    Char charOfStr(const char* str){
+        return str[0];
+    }
+
+    Int intOfStr(const char* str){
+        return atoi(str);
+    }
+
+    Float floatOfStr(const char* str){
+        return atof(str);
+    }
+
+    String stringOfStr(const char* str){
+        return str;
+    } 
+
+    MonthYear monthYearOfStr(const char* str){
+        MonthYear monthYear;
+        monthYear.year = 1000*(str[0]-'0') + 100*(str[1]-'0') + 10*(str[2]-'0') + (str[3]-'0');
+        monthYear.month = 10*(str[4]-'0') + (str[5]-'0');
+        return monthYear;
+    }
+
+    Date dateOfStr(const char* str){
+        Date date;
+        date.year = 1000*(str[0]-'0') + 100*(str[1]-'0') + 10*(str[2]-'0') + (str[3]-'0');
+        date.month = 10*(str[4]-'0') + (str[5]-'0');
+        date.day = 10*(str[6]-'0') + (str[7]-'0');
+        return date;
+    }
+
+    Time timeOfStr(const char* str){
+        Time res;
+        res.hour = 10*(str[0]-'0')+(str[1]-'0');
+        res.minute = 10*(str[3]-'0')+(str[4]-'0');
+        res.second = 10*(str[6]-'0')+(str[7]-'0');
+        if(str[8] == '.')
+            res.millisec = 100*(str[9]-'0') + 10*(str[10]-'0') + (str[11]-'0');
+        else
+            res.millisec = 0;
+        return res;
+    }
+
+    DateAndTime dateAndTimeOfStr(const char* str){
+        DateAndTime dateAndTime;
+        (Date&)dateAndTime = dateOfStr(str);
+        (Time&)dateAndTime = timeOfStr(str+8);
+        return dateAndTime;
+    }
+
+    char* writeThere(char* str, Char c){
+        *str = c; return str+1;}
+
+    char* writeThere(char* str, Int i){
+        return str+sprintf(str, "%d", i);}
+
+    char* writeThere(char* str, Float f){
+        return str+sprintf(str, "%f", f);}
+
+    char* writeThere(char* str, String theStr, unsigned size){
+        strcpy(str, theStr); return str+size;}
+
+    char* writeThere(char* str, const char* theStr){
+        return writeThere(str, theStr, strlen(theStr));
+    }
+
+    char* writeThere(char* str, Data data)
     {
-        //What about 1h time changes? //TODO
-        //Time propably could be solved nicer (with POSIX epoch)
+        memcpy(str, data.ptr, data.size);
+        return str + data.size;
+    }
 
-        template <class T>
-        inline int cmp(const T& a, const T& b)
+    char* writeThere(char* str, Date date)
+    { //YYYYMMDD
+        str[0] = '0'+(date.year/1000)%10;
+        str[1] = '0'+(date.year/100)%10;
+        str[2] = '0'+(date.year/10)%10;
+        str[3] = '0'+(date.year)%10;
+        str[4] = '0'+(date.month/10)%10;
+        str[5] = '0'+(date.month)%10;
+        str[6] = '0'+(date.day/10)%10;
+        str[7] = '0'+(date.day)%10;
+        return str+8;
+    }
+
+    char* writeThere(char* str, MonthYear monthYear)
+    { //MMDD
+        str[0] = '0'+(monthYear.year/1000)%10;
+        str[1] = '0'+(monthYear.year/100)%10;
+        str[2] = '0'+(monthYear.year/10)%10;
+        str[3] = '0'+(monthYear.year)%10;
+        str[4] = '0'+(monthYear.month/10)%10;
+        str[5] = '0'+(monthYear.month)%10;
+        return str+6;
+    }
+
+    char* writeThere(char* str, Time time)
+    { //YYYYMMDD-HH:MM:SS.sss
+        str[0] = '0'+(time.hour/10)%10;
+        str[1] = '0'+(time.hour)%10;
+        str[2] = ':';
+        str[3] = '0'+(time.minute/10)%10;
+        str[4] = '0'+(time.minute)%10;
+        str[5] = ':';
+        str[6] = '0'+(time.second/10)%10;
+        str[7] = '0'+(time.second)%10;
+
+        if(time.millisec != 0)
         {
-            if(a < b) return -1;
-            if(b < a) return 1;
-            return 0;
+            str[8] = '.';
+            str[9] = '0'+(time.millisec/100)%10;
+            str[10] = '0'+(time.millisec/10)%10;
+            str[11] = '0'+(time.millisec)%10;
+            return str+12;
         }
-
-        bool MonthYear::operator<(const MonthYear& b) const
+        else
         {
-            int cmpRes;
-            cmpRes = cmp(year, b.year); 
-            if(cmpRes < 0)return true; 
-            if(cmpRes > 0)return false;
-            cmpRes = cmp(month, b.month); 
-            if(cmpRes < 0)return true; 
-            if(cmpRes > 0)return false;
-            return false;
-        }
-
-        bool Date::operator<(const Date& b) const
-        {
-            int cmpRes;
-            cmpRes = cmp(year, b.year); 
-            if(cmpRes < 0)return true; 
-            if(cmpRes > 0)return false;
-            cmpRes = cmp(month, b.month); 
-            if(cmpRes < 0)return true; 
-            if(cmpRes > 0)return false;
-            cmpRes = cmp(day, b.day); 
-            if(cmpRes < 0)return true; 
-            if(cmpRes > 0)return false;
-            return false;
-        }
-
-        bool Time::operator<(const Time& b) const
-        {
-            int cmpRes;
-            cmpRes = cmp(hour, b.hour); 
-            if(cmpRes < 0)return true; 
-            if(cmpRes > 0)return false;
-            cmpRes = cmp(minute, b.minute); 
-            if(cmpRes < 0)return true; 
-            if(cmpRes > 0)return false;
-            cmpRes = cmp(second, b.second); 
-            if(cmpRes < 0)return true; 
-            if(cmpRes > 0)return false;
-            cmpRes = cmp(millisec, b.millisec); 
-            if(cmpRes < 0)return true; 
-            if(cmpRes > 0)return false;
-            return false;
-        }
-
-        bool DateAndTime::operator<(const DateAndTime& b) const
-        {
-            const Time& time = (Time&)*this;
-            const Date& date = (Date&)*this;
-            const Time& timeB = (Time&)b;
-            const Date& dateB = (Date&)b;
-
-            return cmp(date, dateB) < 0 ||
-                    (cmp(date, dateB) == 0 && cmp(time, timeB) < 0);
+            str[8] = 0;
+            return str+8;
         }
     }
 
-    Types::Date getCurDate()
+    char* writeThere(char* str, DateAndTime dateAndTime)
+    {
+        auto dateEnd = writeThere(str, (Date&)dateAndTime);
+        *dateEnd = '-';
+        return writeThere(dateEnd+1, (Time&)dateAndTime);
+    }
+
+    char* writeThere(char* str, const MulValString&)
+    {
+        return nullptr;
+    }   
+
+
+    // current Date and Time getters
+    Date getDate()
     {
         time_t now = time(0);
         tm tstruct;
         tstruct = *localtime(&now);
 
-        Types::Date res;
+        Date res;
         res.year = tstruct.tm_year + 1900;
         res.month = tstruct.tm_mon + 1;
         res.day = tstruct.tm_mday;
         return res;
     }
 
-    Types::Time getCurTime()
+    Time getTime()
     {
         time_t now = time(0);
         tm tstruct;
         tstruct = *localtime(&now);
 
-        Types::Time res;
+        Time res;
         res.hour = tstruct.tm_hour;
         res.minute = tstruct.tm_min;
         res.second = tstruct.tm_sec;
@@ -102,13 +175,13 @@ namespace FIX
         return res;
     }
 
-    Types::DateAndTime getCurDateAndTime()
+    DateAndTime getDateAndTime()
     {
         time_t now = time(0);
         tm tstruct;
         tstruct = *localtime(&now);
 
-        Types::DateAndTime res;
+        DateAndTime res;
         res.year = tstruct.tm_year + 1900;
         res.month = tstruct.tm_mon + 1;
         res.day = tstruct.tm_mday;
@@ -120,26 +193,26 @@ namespace FIX
     }
 
     //UTC
-    Types::Date getCurUTCDate()
+    Date getUTCDate()
     {
         time_t now = time(0);
         tm tstruct;
         tstruct = *localtime(&now);
 
-        Types::Date res;
+        Date res;
         res.year = tstruct.tm_year + 1900;
         res.month = tstruct.tm_mon + 1;
         res.day = tstruct.tm_mday;
         return res;
     }
 
-    Types::Time getCurUTCTime()
+    Time getUTCTime()
     {
         time_t now = time(0);
         tm tstruct;
         tstruct = *localtime(&now);
 
-        Types::Time res;
+        Time res;
         res.hour = tstruct.tm_hour;
         res.minute = tstruct.tm_min;
         res.second = tstruct.tm_sec;
@@ -147,13 +220,13 @@ namespace FIX
         return res;
     }
 
-    Types::DateAndTime getCurUTCDateAndTime()
+    DateAndTime getUTCDateAndTime()
     {
         time_t now = time(0);
         tm tstruct;
         tstruct = *gmtime(&now);
 
-        Types::DateAndTime res;
+        DateAndTime res;
         res.year = tstruct.tm_year + 1900;
         res.month = tstruct.tm_mon + 1;
         res.day = tstruct.tm_mday;

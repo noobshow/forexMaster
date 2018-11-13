@@ -1,4 +1,6 @@
 #include "Session.hpp"
+#include "../Tags.hpp"
+#include <cstring>
 
 namespace FIX
 {
@@ -69,6 +71,11 @@ namespace FIX
         if(sendBuff != nullptr)
             free(sendBuff);
     }
+
+    void Session::addTagVal(const char* tagVal, char*& last){
+        last = strcpy(last, tagVal) + strlen(tagVal);
+        *(last++) = FIX::SOH;
+    };
 
     void Session::onNewMessage(Message&& msg)
     {
@@ -162,7 +169,6 @@ namespace FIX
     {
         logg << "Logging in...\n";
 
-        auto curTime = FIX::getCurUTCDateAndTime();
         auto sendTime = clock::now();
 
         sendMessage(
@@ -172,7 +178,7 @@ namespace FIX
             FIX::TargetSubID::tagVal("QUOTE"),
             FIX::SenderSubID::tagVal("QUOTE"),
             FIX::MsgSeqNum::tagVal(msgSeqNum++),
-            FIX::SendingTime::tagVal(curTime.day, curTime.month, curTime.year, curTime.hour, curTime.minute, curTime.second),
+            FIX::SendingTime::tagVal(FIX::getUTCDateAndTime()),
             FIX::EncryptMethod::tagValNoneOrOther,
             FIX::HeartBtInt::tagVal(heartbeatFrequency),
             FIX::ResetSeqNumFlag::tagValYesResetSequenceNumbers,
@@ -204,8 +210,6 @@ namespace FIX
 //LOGOUT
     void Session::logout()
     {
-        auto curTime = FIX::getCurUTCDateAndTime();
-
         sendMessage(
             FIX::MsgType::tagValLogout,
             FIX::SenderCompID::tagVal("fxpig.3001287"),
@@ -213,7 +217,7 @@ namespace FIX
             FIX::TargetSubID::tagVal("QUOTE"),
             FIX::SenderSubID::tagVal("QUOTE"),
             FIX::MsgSeqNum::tagVal(msgSeqNum++),
-            FIX::SendingTime::tagVal(curTime.day, curTime.month, curTime.year, curTime.hour, curTime.minute, curTime.second)
+            FIX::SendingTime::tagVal(FIX::getUTCDateAndTime())
         );
     }
 
@@ -239,9 +243,6 @@ namespace FIX
             if(isTimeToStop)
                 return;
 
-
-            auto curTime = FIX::getCurUTCDateAndTime();
-
             //If received TestRequest answer it
             if(waitRes != nullptr && !strcmp(waitRes->tagVals[2].val, FIX::MsgType::valTestRequest))
             {
@@ -260,7 +261,7 @@ namespace FIX
                     FIX::TargetSubID::tagVal("QUOTE"),
                     FIX::SenderSubID::tagVal("QUOTE"),
                     FIX::MsgSeqNum::tagVal(msgSeqNum++),
-                    FIX::SendingTime::tagVal(curTime.day, curTime.month, curTime.year, curTime.hour, curTime.minute, curTime.second),
+                    FIX::SendingTime::tagVal(FIX::getUTCDateAndTime()),
                     FIX::TestReqID::tagVal(testReqID)
                 );
 
@@ -282,7 +283,7 @@ namespace FIX
                     FIX::TargetSubID::tagVal("QUOTE"),
                     FIX::SenderSubID::tagVal("QUOTE"),
                     FIX::MsgSeqNum::tagVal(msgSeqNum++),
-                    FIX::SendingTime::tagVal(curTime.day, curTime.month, curTime.year, curTime.hour, curTime.minute, curTime.second)
+                    FIX::SendingTime::tagVal(FIX::getUTCDateAndTime())
                 );
 
                 lastHeartbeatTime = clock::now();
@@ -298,7 +299,7 @@ namespace FIX
                     FIX::TargetSubID::tagVal("QUOTE"),
                     FIX::SenderSubID::tagVal("QUOTE"),
                     FIX::MsgSeqNum::tagVal(msgSeqNum++),
-                    FIX::SendingTime::tagVal(curTime.day, curTime.month, curTime.year, curTime.hour, curTime.minute, curTime.second),
+                    FIX::SendingTime::tagVal(FIX::getUTCDateAndTime()),
                     FIX::TestReqID::tagVal("TEST")
                 );
             }
