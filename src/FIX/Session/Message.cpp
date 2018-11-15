@@ -31,4 +31,9 @@ namespace FIX
         memory = msg.memory;
         return *this;
     }
+
+    bool Session::Message::isMsgType(const char* someMsgType) const
+    {
+        return (strcmp(tagVals[2].val, someMsgType) == 0);
+    }
 }

@@ -14,7 +14,9 @@ int main()
         logg << "Session failed to start!\n";
     }
 
-    std::this_thread::sleep_for(std::chrono::seconds(120));
+    fixSession.subscribeForCurrency([](float a, float b){});
+
+    std::this_thread::sleep_for(std::chrono::seconds(10020));
 
     fixSession.finish();
 

@@ -32,6 +32,13 @@ namespace FIX
             delete heartbeatThread;
             heartbeatThread = nullptr;
         }
+
+        if(resendThread != nullptr)
+        {
+            resendThread->join();
+            delete resendThread;
+            resendThread = nullptr;
+        }
     }
 
     bool QuoteSession::start(const char* serverHostName, int port, const char* login, const char* password)
@@ -58,7 +65,12 @@ namespace FIX
         msgSeqNum = 1;
         heartbeatFrequency = 30;
 
-        return this->login();
+        bool result = this->login();
+        
+        if(!result)
+            this->finish();
+
+        return result;
     }
 
 //LOGIN
@@ -68,14 +80,8 @@ namespace FIX
 
         auto sendTime = clock::now();
 
-        sendMessage(
+        sendNextMessage(
             FIX::MsgType::tagValLogon,
-            FIX::SenderCompID::tagVal("fxpig.3001287"),
-            FIX::TargetCompID::tagVal("CSERVER"),
-            FIX::TargetSubID::tagVal("QUOTE"),
-            FIX::SenderSubID::tagVal("QUOTE"),
-            FIX::MsgSeqNum::tagVal(msgSeqNum++),
-            FIX::SendingTime::tagVal(FIX::getUTCDateAndTime()),
             FIX::EncryptMethod::tagValNoneOrOther,
             FIX::HeartBtInt::tagVal(heartbeatFrequency),
             FIX::ResetSeqNumFlag::tagValYesResetSequenceNumbers,
@@ -83,8 +89,8 @@ namespace FIX
             FIX::Password::tagVal("thisIsATemporaryPassword1337")
         );
 
-        const Message*  waitRes = waitForMessage(500, [](const Message& m)->const bool{
-            if(strcmp(m.tagVals[2].val, FIX::MsgType::valLogon) == 0)
+        const Message*  waitRes = waitForMessage(500, [](const Message& m)->bool{
+            if(m.isMsgType(FIX::MsgType::valLogon))
                 return true;
 
             return false;
@@ -99,6 +105,10 @@ namespace FIX
         {
             //start heartbeat handling
             heartbeatThread = new std::thread([this](){this->handleHeartbeat();});
+
+            //Start resend handling
+            resendThread = new std::thread([this](){this->handleResending();});
+            
             return true;
         }
     }
@@ -106,14 +116,8 @@ namespace FIX
 //LOGOUT
     void QuoteSession::logout()
     {
-        sendMessage(
-            FIX::MsgType::tagValLogout,
-            FIX::SenderCompID::tagVal("fxpig.3001287"),
-            FIX::TargetCompID::tagVal("CSERVER"),
-            FIX::TargetSubID::tagVal("QUOTE"),
-            FIX::SenderSubID::tagVal("QUOTE"),
-            FIX::MsgSeqNum::tagVal(msgSeqNum++),
-            FIX::SendingTime::tagVal(FIX::getUTCDateAndTime())
+        sendNextMessage(
+            FIX::MsgType::tagValLogout
         );
     }
 
@@ -123,13 +127,12 @@ namespace FIX
         timePoint lastHeartbeatTime = clock::now();
         timePoint lastRecvHeartbeatTime = clock::now();
 
-
         while(!isTimeToStop) //Session finishing
         {
             // Wait for possible TestRequestMesages
-            const Message* waitRes = waitForMessage(500, [](const Message& msg)->const bool{
-                if(!strcmp(msg.tagVals[2].val, FIX::MsgType::valTestRequest)
-                || !strcmp(msg.tagVals[2].val, FIX::MsgType::valHeartbeat))
+            const Message* waitRes = waitForMessage(500, [](const Message& msg)->bool{
+                if(msg.isMsgType(FIX::MsgType::valTestRequest)
+                || msg.isMsgType(FIX::MsgType::valHeartbeat))
                     return true;
                 else
                     return false;
@@ -139,7 +142,7 @@ namespace FIX
                 return;
 
             //If received TestRequest answer it
-            if(waitRes != nullptr && !strcmp(waitRes->tagVals[2].val, FIX::MsgType::valTestRequest))
+            if(waitRes != nullptr && waitRes->isMsgType(FIX::MsgType::valTestRequest))
             {
                 const char* testReqID = "error_not_found";
                 for(auto tagVal : waitRes->tagVals)
@@ -149,21 +152,15 @@ namespace FIX
                     break;
                 }
 
-                sendMessage(
+                sendNextMessage(
                     FIX::MsgType::tagValHeartbeat,
-                    FIX::SenderCompID::tagVal("fxpig.3001287"),
-                    FIX::TargetCompID::tagVal("CSERVER"),
-                    FIX::TargetSubID::tagVal("QUOTE"),
-                    FIX::SenderSubID::tagVal("QUOTE"),
-                    FIX::MsgSeqNum::tagVal(msgSeqNum++),
-                    FIX::SendingTime::tagVal(FIX::getUTCDateAndTime()),
                     FIX::TestReqID::tagVal(testReqID)
                 );
 
                 lastHeartbeatTime = clock::now();
             }
 
-            if(waitRes != nullptr && !strcmp(waitRes->tagVals[2].val, FIX::MsgType::valHeartbeat))
+            if(waitRes != nullptr && waitRes->isMsgType(FIX::MsgType::valHeartbeat))
             {
                 lastRecvHeartbeatTime = clock::now();
             }
@@ -171,14 +168,8 @@ namespace FIX
             //If its time to send heartbeat do it
             if(std::chrono::duration<float>(clock::now() - lastHeartbeatTime).count() >= heartbeatFrequency)
             {
-                sendMessage(
-                    FIX::MsgType::tagValHeartbeat,
-                    FIX::SenderCompID::tagVal("fxpig.3001287"),
-                    FIX::TargetCompID::tagVal("CSERVER"),
-                    FIX::TargetSubID::tagVal("QUOTE"),
-                    FIX::SenderSubID::tagVal("QUOTE"),
-                    FIX::MsgSeqNum::tagVal(msgSeqNum++),
-                    FIX::SendingTime::tagVal(FIX::getUTCDateAndTime())
+                sendNextMessage(
+                    FIX::MsgType::tagValHeartbeat
                 );
 
                 lastHeartbeatTime = clock::now();
@@ -187,14 +178,8 @@ namespace FIX
             //If server didnt send heartbeat in time send TestRequest
             if(std::chrono::duration<float>(clock::now() - lastRecvHeartbeatTime).count() > heartbeatFrequency+1)
             {
-                sendMessage(
+                sendNextMessage(
                     FIX::MsgType::tagValTestRequest,
-                    FIX::SenderCompID::tagVal("fxpig.3001287"),
-                    FIX::TargetCompID::tagVal("CSERVER"),
-                    FIX::TargetSubID::tagVal("QUOTE"),
-                    FIX::SenderSubID::tagVal("QUOTE"),
-                    FIX::MsgSeqNum::tagVal(msgSeqNum++),
-                    FIX::SendingTime::tagVal(FIX::getUTCDateAndTime()),
                     FIX::TestReqID::tagVal("TEST")
                 );
             }
@@ -207,4 +192,100 @@ namespace FIX
         }
     }
 
+//RESENDING
+    void QuoteSession::handleResending()
+    {
+        timePoint lastChecked = clock::now();
+        int serverMsgSeqNum = 1;
+
+        while(!isTimeToStop)
+        {
+            const Message* waitRes = waitForMessage(500, 
+                [&lastChecked, &serverMsgSeqNum, this](const Message& m)->bool{
+                    lastChecked = m.recvTime;
+
+                    int curServerMsgSeqNum = FIX::intOfStr(m.tagVals[7].val);
+                    if(curServerMsgSeqNum > serverMsgSeqNum+1) //Missed messages
+                    {
+                        //Ask for resending
+                        this->sendNextMessage(
+                        FIX::MsgType::tagValResendRequest,
+                        FIX::BeginSeqNo::tagVal(serverMsgSeqNum+1),
+                        FIX::EndSeqNo::tagVal(curServerMsgSeqNum-1)
+                        );
+                    }
+                    serverMsgSeqNum = curServerMsgSeqNum;
+
+                   if(m.isMsgType(FIX::MsgType::valResendRequest))
+                        return true;
+                    else
+                        return false;
+                }, lastChecked);
+
+        if(waitRes == nullptr)
+            continue;
+
+        int from = 1, to = 1;
+
+        for(auto&& tagVal : waitRes->tagVals)
+        {
+            if(tagVal.tag == FIX::BeginSeqNo::tag)
+                from = FIX::intOfStr(tagVal.val);
+
+            if(tagVal.tag == FIX::EndSeqNo::tag)
+                from = FIX::intOfStr(tagVal.val);    
+        }
+
+        if(to == 0)
+            to = msgSeqNum;
+
+        if(from > to || (to - from > 100))
+        {
+            //OOps
+            continue;
+        }
+
+        for(int i = from; i <= to; i++)
+        {
+            auto findRes = sendMessages.find(i);
+
+            // If message hasnt been deleted then resend it
+            // otherwise send GapFill
+            if(findRes != sendMessages.end())
+            {
+                sendLock.lock();
+                socket.send(&findRes->second[0], findRes->second.size());
+                sendLock.unlock();
+            }
+            else
+            {
+                sendNextMessage(FIX::MsgType::tagValSequenceReset,
+                FIX::GapFillFlag::tagValGapFillMessageMsgSeqNumFieldValid);
+            }
+        }
+
+        }
+    }
+
+
+    //SUBSCRIPTION
+    void QuoteSession::subscribeForCurrency(void (*callbackFunc)(float bid, float ask))
+    {
+        timePoint sendTime = clock::now();
+
+        sendNextMessage(
+            FIX::MsgType::tagValMarketDataRequest,
+            FIX::MDReqID::tagVal("TEST"),
+            FIX::SubscriptionRequestType::tagValSnapshotplusUpdates,
+            FIX::MarketDepth::tagValTopOfBook, //What does it do? //TODO
+            FIX::MDUpdateType::tagValIncrementalRefresh,
+
+            FIX::NoRelatedSym::tagVal(1), // <- how many symbols
+            FIX::Symbol::tagVal("1"),
+            FIX::NoMDEntryTypes::tagVal(2),
+            FIX::MDEntryType::tagValBid,
+            FIX::MDEntryType::tagValOffer
+        );
+
+    }
 } //namespace FIX

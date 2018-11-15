@@ -9,6 +9,7 @@
 #include <mutex>
 #include <shared_mutex>
 #include <unordered_map>
+#include <map>
 
 namespace FIX
 {
@@ -42,6 +43,8 @@ protected:
         int checkSum;
         timePoint recvTime;
 
+        bool isMsgType(const char*) const;
+
         //Not important
         Message();
         Message(const Message& msg);
@@ -61,16 +64,18 @@ protected:
 //Sending
     char* sendBuff;
     char* sendBuffContentStart; //Send Buffer after 8=FIX4.4|9=12345|
-    std::mutex sendLock;
     
     template <class... Args> 
-    void sendMessage(Args&&... tagVals);
+    int sendMessage(const Args&... tagVals);
     // Usage e.g. sendMessage(FIX::MsgType::tagValLogon, FIX::Price::tagVal(40));
+    // Not thread safe - its derivative class job
 
     //helpers for sendMessage
     void addTagVal(const char* tagVal, char*& last);
     template <class T>
     void addTagVal(const writeableTagVal<T>& writeableTagVal, char*& last);
+
+    std::shared_mutex sendMessagesLock;
 
 //Receiving
     Receiver* receiver;
@@ -90,8 +95,9 @@ protected:
     // false otherwise
     // If Message is found pointer to it is returned
     // nullptr otherwise
+    template <class EvalFunc> // bool evalFunc(const Message& m) <- template for capture lambdas
     const Message* waitForMessage(int timeoutMS,
-                                  const bool (*evalFunc)(const Message& m),
+                                  EvalFunc evalFunc,
                                   timePoint fromWhen = clock::now());
 
 //Session handling
@@ -109,10 +115,8 @@ protected:
 
 
     template <class... Args> 
-    void FIX::Session::sendMessage(Args&&... tagVals)
+    int FIX::Session::sendMessage(const Args&... tagVals)
     {
-        std::scoped_lock sendLockGuard(sendLock);
-
         char* last = sendBuffContentStart;
 
         //Add all user-given tags
@@ -143,9 +147,78 @@ protected:
 
         socket.send(sendBuff, last-sendBuff);
 
-        logg << "MESSAGE SENT: \n";
-        for(char* c = sendBuff; *c != 0; c++) logg << (*c == FIX::SOH ? '|' : *c); 
-        logg << '\n';
+        return last - sendBuff;
+    }
+
+    template <class EvalFunc>
+    const Session::Message* Session::waitForMessage(int timeoutMS,
+                                  EvalFunc evalFunc,
+                                  timePoint fromWhen)
+    {
+        const Message* result = nullptr;
+        auto lastProccesedTime = fromWhen;
+
+        recvQueueLock.lock_shared();
+        for(const Message& m : recvQueue)
+        {
+            if(m.recvTime > lastProccesedTime)
+            {
+                if(evalFunc(m))
+                {
+                    result = &m;
+                    break;
+                }
+            }
+            else
+                break;
+        }
+
+        if(!recvQueue.empty())
+            lastProccesedTime = recvQueue.begin()->recvTime;
+        recvQueueLock.unlock_shared();
+        
+        if(result != nullptr)
+            return result;
+
+        auto untilTimeout = clock::now() + std::chrono::milliseconds(timeoutMS);
+        while(true)
+        {
+            //Wait for new messages
+            std::unique_lock<std::mutex> newMessageLockGuard(newMessageLock);
+
+            auto waitRes = newMessage.wait_until(newMessageLockGuard, untilTimeout);
+
+            if(waitRes == std::cv_status::timeout)
+                return nullptr;
+
+            recvQueueLock.lock_shared();
+            newMessageLockGuard.unlock();
+
+            // Check out new messages
+            for(const Message& m : recvQueue)
+            {
+                if(m.recvTime > lastProccesedTime)
+                {
+                    if(evalFunc(m))
+                    {
+                        result = &m;
+                        break;
+                    }
+                }
+                else
+                    break;
+            }
+
+            if(!recvQueue.empty())
+                lastProccesedTime = recvQueue.begin()->recvTime;
+
+            recvQueueLock.unlock_shared();
+        
+            if(result != nullptr)
+                return result;
+        }
+
+        return nullptr;
     }
 }//namespace FIX
 
