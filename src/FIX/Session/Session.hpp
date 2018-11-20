@@ -10,6 +10,8 @@
 #include <shared_mutex>
 #include <unordered_map>
 #include <map>
+#include <functional>
+#include "MaxSizeQueue.hpp"
 
 namespace FIX
 {
@@ -59,6 +61,18 @@ protected:
         //this is ugly will be handled better in the future //TODO
     };
 
+    class MsgQueue
+    {
+        MsgQueue(int maxSize); 
+        //everything pushed after maxSize is reached will cause first element to be erased
+        int emplace(Message&& msg); // -> emplaced index
+        int first();
+        int last();
+        Message& operator[](int index);
+
+        private: 
+    };
+
     TCPSocket socket;
 
 //Sending
@@ -80,7 +94,7 @@ protected:
 //Receiving
     Receiver* receiver;
 
-    std::list<Message> recvQueue; // <- probably could be fixed size queue for speed without realloc //TODO
+    MaxSizeQueue<Message> recvQueue;
     std::shared_mutex recvQueueLock;
 
     std::condition_variable newMessage;
@@ -90,15 +104,19 @@ protected:
     void onNewMessage(Message&& msg);
 
     // Waits until specified message arrives
-    // evalFunc should return true if message given 
+    // evaluationFunc should return true if message given 
     // is the one we are waiting for
-    // false otherwise
-    // If Message is found pointer to it is returned
-    // nullptr otherwise
-    template <class EvalFunc> // bool evalFunc(const Message& m) <- template for capture lambdas
-    const Message* waitForMessage(int timeoutMS,
-                                  EvalFunc evalFunc,
-                                  timePoint fromWhen = clock::now());
+    // If Message is found returns true else false
+    // LastCheckedIndex will be updated automatically
+    bool waitForMessage(int timeoutMS,
+                        const std::function<bool (const Message& m)>& evaluationFunc,
+                        int& lastCheckedIndex);
+
+    // Will call doFunc for every new message
+    // Stops when isTimeToStop becomes true
+    void doForNewMessages(const std::function<void (const Message& m)>& doFunc);
+
+    int getLastMessageIndex();
 
 //Session handling
     std::atomic<bool> isTimeToStop; // <- to stop threads and session
@@ -148,77 +166,6 @@ protected:
         socket.send(sendBuff, last-sendBuff);
 
         return last - sendBuff;
-    }
-
-    template <class EvalFunc>
-    const Session::Message* Session::waitForMessage(int timeoutMS,
-                                  EvalFunc evalFunc,
-                                  timePoint fromWhen)
-    {
-        const Message* result = nullptr;
-        auto lastProccesedTime = fromWhen;
-
-        recvQueueLock.lock_shared();
-        for(const Message& m : recvQueue)
-        {
-            if(m.recvTime > lastProccesedTime)
-            {
-                if(evalFunc(m))
-                {
-                    result = &m;
-                    break;
-                }
-            }
-            else
-                break;
-        }
-
-        if(!recvQueue.empty())
-            lastProccesedTime = recvQueue.begin()->recvTime;
-        recvQueueLock.unlock_shared();
-        
-        if(result != nullptr)
-            return result;
-
-        auto untilTimeout = clock::now() + std::chrono::milliseconds(timeoutMS);
-        while(true)
-        {
-            //Wait for new messages
-            std::unique_lock<std::mutex> newMessageLockGuard(newMessageLock);
-
-            auto waitRes = newMessage.wait_until(newMessageLockGuard, untilTimeout);
-
-            if(waitRes == std::cv_status::timeout)
-                return nullptr;
-
-            recvQueueLock.lock_shared();
-            newMessageLockGuard.unlock();
-
-            // Check out new messages
-            for(const Message& m : recvQueue)
-            {
-                if(m.recvTime > lastProccesedTime)
-                {
-                    if(evalFunc(m))
-                    {
-                        result = &m;
-                        break;
-                    }
-                }
-                else
-                    break;
-            }
-
-            if(!recvQueue.empty())
-                lastProccesedTime = recvQueue.begin()->recvTime;
-
-            recvQueueLock.unlock_shared();
-        
-            if(result != nullptr)
-                return result;
-        }
-
-        return nullptr;
     }
 }//namespace FIX
 

@@ -78,7 +78,7 @@ namespace FIX
     {
         logg << "Logging in...\n";
 
-        auto sendTime = clock::now();
+        int lastMessageIndexBeforeSend = getLastMessageIndex();
 
         sendNextMessage(
             FIX::MsgType::tagValLogon,
@@ -89,15 +89,12 @@ namespace FIX
             FIX::Password::tagVal("thisIsATemporaryPassword1337")
         );
 
-        const Message*  waitRes = waitForMessage(500, [](const Message& m)->bool{
-            if(m.isMsgType(FIX::MsgType::valLogon))
-                return true;
-
-            return false;
+        bool waitRes = waitForMessage(500, [](const Message& m)->bool{
+           return (m.isMsgType(FIX::MsgType::valLogon));
         },
-        sendTime);
+        lastMessageIndexBeforeSend);
 
-        if(waitRes == nullptr) //no response
+        if(waitRes == false) //no response
         {
             return false;
         }
@@ -127,107 +124,90 @@ namespace FIX
         timePoint lastHeartbeatTime = clock::now();
         timePoint lastRecvHeartbeatTime = clock::now();
 
-        while(!isTimeToStop) //Session finishing
+        doForNewMessages([&lastHeartbeatTime, &lastRecvHeartbeatTime, this]
+        (const Message& msg)
         {
-            // Wait for possible TestRequestMesages
-            const Message* waitRes = waitForMessage(500, [](const Message& msg)->bool{
-                if(msg.isMsgType(FIX::MsgType::valTestRequest)
-                || msg.isMsgType(FIX::MsgType::valHeartbeat))
-                    return true;
-                else
-                    return false;
-            });
 
-            if(isTimeToStop)
-                return;
-
-            //If received TestRequest answer it
-            if(waitRes != nullptr && waitRes->isMsgType(FIX::MsgType::valTestRequest))
+        //If received TestRequest answer it
+        if(msg.isMsgType(FIX::MsgType::valTestRequest))
+        {
+            const char* testReqID = "error_not_found";
+            for(auto tagVal : msg.tagVals)
+            if(tagVal.tag == FIX::TestReqID::tag)
             {
-                const char* testReqID = "error_not_found";
-                for(auto tagVal : waitRes->tagVals)
-                if(tagVal.tag == FIX::TestReqID::tag)
-                {
-                    testReqID = tagVal.val;
-                    break;
-                }
-
-                sendNextMessage(
-                    FIX::MsgType::tagValHeartbeat,
-                    FIX::TestReqID::tagVal(testReqID)
-                );
-
-                lastHeartbeatTime = clock::now();
+                testReqID = tagVal.val;
+                break;
             }
 
-            if(waitRes != nullptr && waitRes->isMsgType(FIX::MsgType::valHeartbeat))
-            {
-                lastRecvHeartbeatTime = clock::now();
-            }
+            sendNextMessage(
+                FIX::MsgType::tagValHeartbeat,
+                FIX::TestReqID::tagVal(testReqID)
+            );
 
-            //If its time to send heartbeat do it
-            if(std::chrono::duration<float>(clock::now() - lastHeartbeatTime).count() >= heartbeatFrequency)
-            {
-                sendNextMessage(
-                    FIX::MsgType::tagValHeartbeat
-                );
-
-                lastHeartbeatTime = clock::now();
-            }
-
-            //If server didnt send heartbeat in time send TestRequest
-            if(std::chrono::duration<float>(clock::now() - lastRecvHeartbeatTime).count() > heartbeatFrequency+1)
-            {
-                sendNextMessage(
-                    FIX::MsgType::tagValTestRequest,
-                    FIX::TestReqID::tagVal("TEST")
-                );
-            }
-            
-            //If last heartbeat was twice the frequency then connection is down -> finish
-            if(std::chrono::duration<float>(clock::now() - lastRecvHeartbeatTime).count() > 2*heartbeatFrequency)
-            {
-                isTimeToStop = true;
-            }
+            lastHeartbeatTime = clock::now();
         }
+
+        // Received heartbeat
+        if(msg.isMsgType(FIX::MsgType::valHeartbeat))
+        {
+            lastRecvHeartbeatTime = clock::now();
+        }
+
+        //If its time to send heartbeat do it
+        if(std::chrono::duration<float>(clock::now() - lastHeartbeatTime).count() >= heartbeatFrequency)
+        {
+            sendNextMessage(
+                FIX::MsgType::tagValHeartbeat
+            );
+
+            lastHeartbeatTime = clock::now();
+        }
+
+        //If server didnt send heartbeat in time send TestRequest
+        if(std::chrono::duration<float>(clock::now() - lastRecvHeartbeatTime).count() > heartbeatFrequency+1)
+        {
+            sendNextMessage(
+                FIX::MsgType::tagValTestRequest,
+                FIX::TestReqID::tagVal("TEST")
+            );
+        }
+
+        //If last heartbeat was twice the frequency then connection is down -> finish
+        if(std::chrono::duration<float>(clock::now() - lastRecvHeartbeatTime).count() > 2*heartbeatFrequency)
+        {
+            isTimeToStop = true;
+        }
+        });
     }
 
 //RESENDING
     void QuoteSession::handleResending()
     {
-        timePoint lastChecked = clock::now();
         int serverMsgSeqNum = 1;
 
-        while(!isTimeToStop)
+        doForNewMessages([this, &serverMsgSeqNum]
+        (const Message& msg)
         {
-            const Message* waitRes = waitForMessage(500, 
-                [&lastChecked, &serverMsgSeqNum, this](const Message& m)->bool{
-                    lastChecked = m.recvTime;
 
-                    int curServerMsgSeqNum = FIX::intOfStr(m.tagVals[7].val);
-                    if(curServerMsgSeqNum > serverMsgSeqNum+1) //Missed messages
-                    {
-                        //Ask for resending
-                        this->sendNextMessage(
-                        FIX::MsgType::tagValResendRequest,
-                        FIX::BeginSeqNo::tagVal(serverMsgSeqNum+1),
-                        FIX::EndSeqNo::tagVal(curServerMsgSeqNum-1)
-                        );
-                    }
-                    serverMsgSeqNum = curServerMsgSeqNum;
+        int curServerMsgSeqNum = FIX::intOfStr(msg.tagVals[7].val);
+        if(curServerMsgSeqNum > serverMsgSeqNum+1) //Missed messages
+        {
+            //Ask for resending
+            this->sendNextMessage(
+            FIX::MsgType::tagValResendRequest,
+            FIX::BeginSeqNo::tagVal(serverMsgSeqNum+1),
+            FIX::EndSeqNo::tagVal(curServerMsgSeqNum-1)
+            );
+        }
+        serverMsgSeqNum = curServerMsgSeqNum;
 
-                   if(m.isMsgType(FIX::MsgType::valResendRequest))
-                        return true;
-                    else
-                        return false;
-                }, lastChecked);
-
-        if(waitRes == nullptr)
-            continue;
+        if(!msg.isMsgType(FIX::MsgType::valResendRequest))
+            return;
 
         int from = 1, to = 1;
 
-        for(auto&& tagVal : waitRes->tagVals)
+        //This could be done better (just pick right indexes) //TODO
+        for(auto&& tagVal : msg.tagVals)
         {
             if(tagVal.tag == FIX::BeginSeqNo::tag)
                 from = FIX::intOfStr(tagVal.val);
@@ -242,7 +222,7 @@ namespace FIX
         if(from > to || (to - from > 100))
         {
             //OOps
-            continue;
+            return;
         }
 
         for(int i = from; i <= to; i++)
@@ -263,16 +243,14 @@ namespace FIX
                 FIX::GapFillFlag::tagValGapFillMessageMsgSeqNumFieldValid);
             }
         }
-
-        }
+        });
     }
 
 
     //SUBSCRIPTION
-    void QuoteSession::subscribeForCurrency(void (*callbackFunc)(float bid, float ask))
+    void QuoteSession::subscribeForCurrency(const char* currencySymbol, 
+    std::function<void (float, float)> callbackFunc)
     {
-        timePoint sendTime = clock::now();
-
         sendNextMessage(
             FIX::MsgType::tagValMarketDataRequest,
             FIX::MDReqID::tagVal("TEST"),
@@ -281,11 +259,26 @@ namespace FIX
             FIX::MDUpdateType::tagValIncrementalRefresh,
 
             FIX::NoRelatedSym::tagVal(1), // <- how many symbols
-            FIX::Symbol::tagVal("1"),
+            FIX::Symbol::tagVal(currencySymbol),
             FIX::NoMDEntryTypes::tagVal(2),
             FIX::MDEntryType::tagValBid,
             FIX::MDEntryType::tagValOffer
         );
+
+            /*
+            Possible FxPig SymbolIDs:
+            EURUSD 1
+            GBPUSD 2
+            EURJPY 3
+            USDJPY 4
+            AUDUSD 5
+            USDCHF 6
+            GBPJPY 7
+            USDCAD 8
+            EURGBP 9
+            EURCHF 10
+            AUDJPY 11
+            */
 
     }
 } //namespace FIX

@@ -14,9 +14,11 @@ int main()
         logg << "Session failed to start!\n";
     }
 
-    fixSession.subscribeForCurrency([](float a, float b){});
+    fixSession.subscribeForCurrency("1", [](float bid, float ask){
+        logg << "Price for EUR/USD changed to " << bid << "(bid) " << ask << "(ask)\n";
+    });
 
-    std::this_thread::sleep_for(std::chrono::seconds(10020));
+    std::this_thread::sleep_for(std::chrono::seconds(100));
 
     fixSession.finish();
 

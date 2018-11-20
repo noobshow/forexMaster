@@ -1,6 +1,7 @@
 #pragma once
 #include "Session.hpp"
 #include "../Tags.hpp"
+#include <functional>
 
 namespace FIX
 {
@@ -13,7 +14,8 @@ public:
     bool start(const char* serverHostName, int port, const char* login, const char* password);
     void finish();
 
-    void subscribeForCurrency(void (*callbackFunc)(float bid, float ask));
+    void subscribeForCurrency(const char* currencySymbol,
+                            std::function<void (float, float)> callbackFunc);
 
     ~QuoteSession();
 
