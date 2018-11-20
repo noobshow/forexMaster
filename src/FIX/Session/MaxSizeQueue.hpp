@@ -44,7 +44,12 @@ MaxSizeQueue<T>::MaxSizeQueue(int MaxSize, int FirstIndex)
 
 template <class T>
 MaxSizeQueue<T>::~MaxSizeQueue()
-    { free(arr); }
+{   
+    for(int i = this->beginIndex(); i < this->endIndex(); i++)
+        (*this)[i].~T();
+
+    free(arr);
+}
 
 template <class T>
 template <class... Args>

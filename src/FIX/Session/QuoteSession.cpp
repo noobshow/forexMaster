@@ -6,6 +6,7 @@ namespace FIX
     QuoteSession::QuoteSession()
     {
         heartbeatThread = nullptr;
+        subscriptionThread = nullptr;
     }
 
     QuoteSession::~QuoteSession()
@@ -38,6 +39,13 @@ namespace FIX
             resendThread->join();
             delete resendThread;
             resendThread = nullptr;
+        }
+
+        if(subscriptionThread != nullptr)
+        {
+            subscriptionThread->join();
+            delete subscriptionThread;
+            subscriptionThread = nullptr;
         }
     }
 
@@ -249,7 +257,7 @@ namespace FIX
 
     //SUBSCRIPTION
     void QuoteSession::subscribeForCurrency(const char* currencySymbol, 
-    std::function<void (float, float)> callbackFunc)
+    const std::function<void (float, float)>& callbackFunc)
     {
         sendNextMessage(
             FIX::MsgType::tagValMarketDataRequest,
@@ -265,6 +273,11 @@ namespace FIX
             FIX::MDEntryType::tagValOffer
         );
 
+
+        subscribeCallbacks[std::string(currencySymbol)] = callbackFunc;
+
+        if(subscriptionThread == nullptr)
+            subscriptionThread = new std::thread([this](){this->handleSubscriptions();});
             /*
             Possible FxPig SymbolIDs:
             EURUSD 1
@@ -280,5 +293,49 @@ namespace FIX
             AUDJPY 11
             */
 
+    }
+
+    void QuoteSession::handleSubscriptions()
+    {
+        doForNewMessages([this](const Message& msg)
+        {
+            if(!msg.isMsgType(FIX::MsgType::valMarketDataSnapshotOrFullRefresh))
+                return;
+
+            float bid = 0;
+            float offer = 0;
+            const char* symbol = nullptr;
+            std::function<void(float,float)>* callback = nullptr;
+            for(int i = 0; i < (int)msg.tagVals.size(); i++)
+            {
+                auto&& tagVal = msg.tagVals[i];
+
+                if(tagVal.tag == FIX::Symbol::tag)
+                {
+                    symbol = tagVal.val;
+                    subscribeCallbacksLock.lock();
+                    auto findRes = subscribeCallbacks.find(std::string(symbol));
+                    if(findRes == subscribeCallbacks.end())
+                        symbol = nullptr;
+                    else
+                        callback = &(findRes->second);
+                    subscribeCallbacksLock.unlock();
+                }
+
+                if(symbol != nullptr && tagVal.tag == FIX::MDEntryType::tag)
+                {
+                    if(tagVal.val[0] == FIX::MDEntryType::valBid 
+                        && i+1 < (int)msg.tagVals.size())
+                            bid = FIX::floatOfStr(msg.tagVals[i+1].val);
+                    
+                    if(tagVal.val[0] == FIX::MDEntryType::valOffer
+                        && i+1 < (int)msg.tagVals.size())
+                            offer = FIX::floatOfStr(msg.tagVals[i+1].val);
+                }
+            }
+
+            if(callback != nullptr)
+                (*callback)(bid, offer);
+        });
     }
 } //namespace FIX

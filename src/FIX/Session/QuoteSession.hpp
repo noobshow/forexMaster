@@ -15,7 +15,7 @@ public:
     void finish();
 
     void subscribeForCurrency(const char* currencySymbol,
-                            std::function<void (float, float)> callbackFunc);
+                            const std::function<void (float, float)>& callbackFunc);
 
     ~QuoteSession();
 
@@ -29,6 +29,13 @@ private:
 
     std::thread* resendThread;
     void handleResending();
+
+    std::thread* subscriptionThread;
+    void handleSubscriptions();
+    std::unordered_map <std::string, std::function<void(float,float)> >
+        subscribeCallbacks;
+    std::mutex subscribeCallbacksLock;
+    //TODO ^ replace std::string with something to avoid new copying and stuff
 
     std::mutex sendLock;
     std::map<int, std::vector<char> > sendMessages; //messages older than 1000 back are deleted
