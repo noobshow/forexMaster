@@ -1,6 +1,7 @@
 #pragma once
 #include "TCPSocket.hpp"
 #include "../Types.hpp"
+#include "../Tags.hpp"
 #include <Logger.hpp>
 #include <list>
 #include <thread>
@@ -20,6 +21,11 @@ class Session
 {
 public:
     Session();
+
+    bool start(const char* serverHostName, int port,  //ex. 127.0.0.1, 1234
+               const char* senderCompID, const char* senderSubID, // fxpig.12345, QUOTE
+               const char* targetCompID, const char* targetSubID, // CSERVER, QUOTE
+               const char* username,     const char* password);  // 12345, pa55word!
 
     void finish();
     ~Session();
@@ -61,35 +67,38 @@ protected:
         //this is ugly will be handled better in the future //TODO
     };
 
-    class MsgQueue
-    {
-        MsgQueue(int maxSize); 
-        //everything pushed after maxSize is reached will cause first element to be erased
-        int emplace(Message&& msg); // -> emplaced index
-        int first();
-        int last();
-        Message& operator[](int index);
+//Session data
+    std::string senderCompID; // ex. fxpig.3001287
+    std::string targetCompID; // ex. CSERVER
+    std::string senderSubID;  // ex. QUOTE/TRADE
+    std::string targetSubID;  // ex. QUOTE/TRADE
+    std::string username;     // 3001287
+    std::string password; // <password>
 
-        private: 
-    };
-
+//<Internet stuff>
     TCPSocket socket;
 
 //Sending
     char* sendBuff;
     char* sendBuffContentStart; //Send Buffer after 8=FIX4.4|9=12345|
-    
-    template <class... Args> 
-    int sendMessage(const Args&... tagVals);
-    // Usage e.g. sendMessage(FIX::MsgType::tagValLogon, FIX::Price::tagVal(40));
-    // Not thread safe - its derivative class job
+    std::mutex sendLock;
+    std::map<int, std::vector<char> > sendMessages; //messages older than 1000 back are deleted
+    //std::shared_mutex sendMessagesLock;
 
-    //helpers for sendMessage
+    template <class MsgTypeT, class... Args>
+    void sendNextMessage(const MsgTypeT& msgTypeTagVal, const Args&... tagVals);
+    // Sends message with approperiate header and trailer
+    // updates msgSeqNum etc.
+
+    template <class... Args> 
+    int sendTagVals(const Args&... tagVals);
+    // Usage e.g. sendMessage(FIX::MsgType::tagValLogon, FIX::Price::tagVal(40));
+    // its a helper for sendNxtMessage
+
+    //helpers for sendTagVals
     void addTagVal(const char* tagVal, char*& last);
     template <class T>
     void addTagVal(const writeableTagVal<T>& writeableTagVal, char*& last);
-
-    std::shared_mutex sendMessagesLock;
 
 //Receiving
     Receiver* receiver;
@@ -117,11 +126,22 @@ protected:
     void doForNewMessages(const std::function<void (const Message& m)>& doFunc);
 
     int getLastMessageIndex();
+// </Internet stuff>
 
 //Session handling
     std::atomic<bool> isTimeToStop; // <- to stop threads and session
 
     std::atomic<int> msgSeqNum;
+
+    bool login();
+    void logout();
+
+    std::thread* heartbeatThread;
+    int heartbeatFrequency;
+    void handleHeartbeat();
+
+    std::thread* resendThread;
+    void handleResending();
 };
 
 
@@ -133,7 +153,7 @@ protected:
 
 
     template <class... Args> 
-    int FIX::Session::sendMessage(const Args&... tagVals)
+    int FIX::Session::sendTagVals(const Args&... tagVals)
     {
         char* last = sendBuffContentStart;
 
@@ -167,5 +187,36 @@ protected:
 
         return last - sendBuff;
     }
+
+
+    template <class MsgTypeTagVal, class... TagVals>
+    void Session::sendNextMessage(const MsgTypeTagVal& msgTypeTagVal, const TagVals&... tagVals)
+    {
+        std::scoped_lock sendLockGuard(sendLock);
+
+        auto msgLen = sendTagVals(
+            msgTypeTagVal, 
+            FIX::SenderCompID::tagVal(senderCompID.c_str()),
+            FIX::SenderSubID::tagVal(senderSubID.c_str()),
+            FIX::TargetCompID::tagVal(targetCompID.c_str()),
+            FIX::TargetSubID::tagVal(targetSubID.c_str()),
+            FIX::MsgSeqNum::tagVal(msgSeqNum),
+            FIX::SendingTime::tagVal(FIX::getUTCDateAndTime()),
+            tagVals...
+        );
+        
+        if(sendMessages.size() > 1000)
+            sendMessages.erase(sendMessages.begin());
+
+        auto& curMsg = sendMessages[msgSeqNum];
+        curMsg.resize(msgLen);
+        memcpy(&curMsg[0], sendBuff, msgLen);
+
+        msgSeqNum++;
+
+        logg << "MESSAGE SENT: \n";
+        for(char c : curMsg) logg << (c == FIX::SOH ? '|' : c); 
+        logg << '\n';
+    }   
 }//namespace FIX
 
