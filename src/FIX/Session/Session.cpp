@@ -102,6 +102,18 @@ namespace FIX
             delete receiver;
             receiver = nullptr;
         }
+        if(heartbeatThread != nullptr)
+        {
+            heartbeatThread->join();
+            delete heartbeatThread;
+            heartbeatThread = nullptr;
+        }
+        if(resendThread != nullptr)
+        {
+            resendThread->join();
+            delete resendThread;
+            resendThread = nullptr;
+        }
     }
 
     Session::~Session()

@@ -1,6 +1,7 @@
 #include <thread>
 #include <Logger.hpp>
 #include <FIX/FIX.hpp>
+#include "Symbols.hpp"
 
 void testQuoteSession()
 {
@@ -33,16 +34,8 @@ void testQuoteSession()
 
 void testTradeSession()
 {   
+    
     FIX::TradeSession* tradeSession = new FIX::TradeSession;
-    /*
-    Host name: h23.p.ctrader.com
-    (Current IP address 46.105.103.224 can be changed without notice)
-    Port: 5212 (SSL), 5202 (Plain text).
-    Password: (a/c 3001287 password)
-    SenderCompID: fxpig.3001287
-    TargetCompID: CSERVER
-    SenderSubID: TRADE
-    */
     if(tradeSession->start("h23.p.ctrader.com", 5202,
                             "fxpig.3001287", "TRADE",
                             "CSERVER", "TRADE",
@@ -56,9 +49,30 @@ void testTradeSession()
         return;
     }
 
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    float tradedQuantity = 10000;
+    auto newPos = tradeSession->newOrderSell("1", tradedQuantity);
 
+    if(newPos != nullptr)
+    {
+        logg << "Succesfully opened position (" 
+            << newPos->quantity << " at " << newPos->lastOpPrice << ")!\n";
+
+        float openPrice = newPos->lastOpPrice;
+
+        std::this_thread::sleep_for(std::chrono::seconds(10));
+        tradeSession->newOrderBuy(newPos->quantity, *newPos);
+
+        float closePrice = newPos->lastOpPrice;
+
+        float gain = (openPrice * (1.0/closePrice)) - 1.0;
+        logg << "Closed position. Gain: " << std::fixed << gain*tradedQuantity << '\n';
+    }
+    else
+        logg << "Failed to open position!";
+    
     tradeSession->finish();
+
+    delete tradeSession;
 }
 
 int main()
