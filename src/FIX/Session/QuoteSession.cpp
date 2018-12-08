@@ -3,9 +3,10 @@
 
 namespace FIX
 {
-    QuoteSession::QuoteSession()
+    QuoteSession::QuoteSession(const Logger& superLogger)
     {
         subscriptionThread = nullptr;
+        sessionLogg = superLogger.subLogger("quoteSession", "quoteSessionLog.txt");
     }
 
     QuoteSession::~QuoteSession()

@@ -197,7 +197,7 @@ namespace FIX
     {
         time_t now = time(0);
         tm tstruct;
-        tstruct = *localtime(&now);
+        tstruct = *gmtime(&now);
 
         Date res;
         res.year = tstruct.tm_year + 1900;
@@ -210,7 +210,7 @@ namespace FIX
     {
         time_t now = time(0);
         tm tstruct;
-        tstruct = *localtime(&now);
+        tstruct = *gmtime(&now);
 
         Time res;
         res.hour = tstruct.tm_hour;

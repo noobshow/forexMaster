@@ -1,11 +1,11 @@
 #include <thread>
-#include <Logger.hpp>
+#include <utils/Logger.hpp>
 #include <FIX/FIX.hpp>
 #include "Symbols.hpp"
 
 void testQuoteSession()
 {
-    FIX::QuoteSession quoteSession;
+    FIX::QuoteSession quoteSession(fileLogg);
     if(quoteSession.start("h18.p.ctrader.com", 5201, 
                           "fxpig.3001287", "QUOTE",
                           "CSERVER", "QUOTE",
@@ -35,7 +35,7 @@ void testQuoteSession()
 void testTradeSession()
 {   
     
-    FIX::TradeSession* tradeSession = new FIX::TradeSession;
+    FIX::TradeSession* tradeSession = new FIX::TradeSession(fileLogg);
     if(tradeSession->start("h23.p.ctrader.com", 5202,
                             "fxpig.3001287", "TRADE",
                             "CSERVER", "TRADE",
@@ -51,7 +51,10 @@ void testTradeSession()
 
     float tradedQuantity = 10000;
     auto newPos = tradeSession->newOrderSell("1", tradedQuantity);
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+    auto newPos2 = tradeSession->newOrderSell("1", tradedQuantity);
 
+    /*
     if(newPos != nullptr)
     {
         logg << "Succesfully opened position (" 
@@ -69,7 +72,8 @@ void testTradeSession()
     }
     else
         logg << "Failed to open position!";
-    
+    */
+
     tradeSession->finish();
 
     delete tradeSession;

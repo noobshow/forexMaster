@@ -9,7 +9,7 @@ namespace FIX
 class QuoteSession : public Session
 {
 public:
-    QuoteSession();
+    QuoteSession(const Logger& superLogger);
 
     void finish();
 

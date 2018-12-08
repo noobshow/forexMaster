@@ -27,14 +27,16 @@ namespace FIX
         password = userPassword;
         
         if(socket.connectTo(serverHostName, port))
-            logg << "Succesfully connected to server " << serverHostName << ":" << port << "\n";
+            sessionLogg << "Succesfully connected to server " << serverHostName << ":" << port << "\n";
         else
         {
-            logg << "Failed to connect to server " << serverHostName << ":" << port << "\n";
+            sessionLogg << "Failed to connect to server " << serverHostName << ":" << port << "\n";
             return false;
         }
 
         receiver = new Receiver(this, socket);
+
+        receiveLogg = sessionLogg.coLogger("receiveLog.txt");
 
         sendBuff = (char*)malloc(1024*1024); //Messages >1MB are not supported
         std::string msgBegin;
@@ -59,7 +61,7 @@ namespace FIX
     //LOGIN
     bool Session::login()
     {
-        logg << "Logging in...\n";
+        sessionLogg << "Logging in...\n";
 
         int lastMessageIndexBeforeSend = getLastMessageIndex();
 
@@ -130,10 +132,11 @@ namespace FIX
 
     void Session::onNewMessage(Message&& msg)
     {
-        logg << "\nReceived new message!\n";
+        receiveLogg << dateAndTimeStamp() << '\n';
+        receiveLogg << "\nReceived new message!\n";
         for(auto& tagVal : msg.tagVals)
-            logg << toHuman(tagVal.tag, tagVal.val) << '\n';
-        logg << '\n';
+            receiveLogg << toHuman(tagVal.tag, tagVal.val) << '\n';
+        receiveLogg << '\n';
 
         recvQueueLock.lock();
         recvQueue.emplace(std::move(msg));

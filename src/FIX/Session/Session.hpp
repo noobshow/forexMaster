@@ -2,7 +2,7 @@
 #include "TCPSocket.hpp"
 #include "../Types.hpp"
 #include "../Tags.hpp"
-#include <Logger.hpp>
+#include <utils/Logger.hpp>
 #include <list>
 #include <thread>
 #include <vector>
@@ -31,6 +31,9 @@ public:
     ~Session();
 
 protected:
+    Logger sessionLogg;
+    Logger receiveLogg; // = sessionLog.coLogger("receiveLog.txt")
+
 //Basic Session functionality
     using clock = std::chrono::system_clock;
     using timePoint = std::chrono::system_clock::time_point;
@@ -181,7 +184,6 @@ protected:
         *(last++) = '0' + (checkSum/10)%10;
         *(last++) = '0' + (checkSum%10);
         *(last++) = FIX::SOH;
-        *(last++) = 0;
 
         socket.send(sendBuff, last-sendBuff);
 
@@ -214,9 +216,10 @@ protected:
 
         msgSeqNum++;
 
-        logg << "MESSAGE SENT: \n";
-        for(char c : curMsg) logg << (c == FIX::SOH ? '|' : c); 
-        logg << '\n';
+        sessionLogg << dateAndTimeStamp() << '\n';
+        sessionLogg << "MESSAGE SENT: \n";
+        for(char c : curMsg) sessionLogg << (c == FIX::SOH ? '|' : c); 
+        sessionLogg << '\n';
     }   
 }//namespace FIX
 

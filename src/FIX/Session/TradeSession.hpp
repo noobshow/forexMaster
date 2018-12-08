@@ -7,7 +7,7 @@ namespace FIX
 class TradeSession : public Session
 {
 public:
-    TradeSession();
+    TradeSession(const Logger& superLogger);
 
     struct Position
     {

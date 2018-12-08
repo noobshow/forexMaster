@@ -1,4 +1,5 @@
-import sys;
+#!/usr/bin/python3
+import sys
 
 
 realType = {

@@ -2,8 +2,9 @@
 
 namespace FIX
 {
-    TradeSession::TradeSession()
+    TradeSession::TradeSession(const Logger& superLogger)
     {
+        sessionLogg = superLogger.subLogger("tradeSesssion", "tradeSessionLog.txt");
         nxtOrderID = 1;
     }
 
