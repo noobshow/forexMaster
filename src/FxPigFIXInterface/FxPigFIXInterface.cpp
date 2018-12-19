@@ -38,12 +38,17 @@ FxPigFIXInterface::FxPigFIXInterface
 }
 
 void FxPigFIXInterface::subscribeForPrice(Symbols::Pair pair,
-                                     std::function<void(float, float, timePoint)> callback)
+                                     std::function<void(float, float, TimePoint)> callback)
 {
+
     quoteSession->subscribeForCurrency(pairToFxPigID[pair.first][pair.second], 
-    [callback](float bid, float ask)->void{
-        timePoint curTime = std::chrono::system_clock::now();
-        callback(bid, ask, curTime);
+    [callback](float bid, float ask)->void
+    {   
+        auto curDate = FIX::getUTCDateAndTime();
+
+        TimePoint now = TimePoint(curDate.year, curDate.month, curDate.day, curDate.hour, curDate.minute, curDate.second, curDate.millisec);
+
+        callback(bid, ask, now);
     });
 }
 

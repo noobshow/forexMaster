@@ -52,8 +52,8 @@ public:
         {*outStream << t; return *this;}
 
     //Logger(a, b, c, ...) usage
-    template <class... Args> void operator()(const Args&... args)
-        {((*this) << ... << args);}
+    template <class... Args> Logger& operator()(const Args&... args)
+        {return ((*this) << ... << args);}
 
     //Co-logger - file will be created in the same folder as base
     Logger coLogger(const char* fileName) const; 
@@ -117,3 +117,5 @@ operator<<(Logger& logger, const T& t)
     }
     return logger << "}";
 }
+
+Logger& operator<<(Logger& logger, time_t timeT);

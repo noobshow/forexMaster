@@ -3,6 +3,14 @@
 Logger logg;
 Logger fileLogg("logs", "log.txt");
 
+Logger& operator<<(Logger& logger, const time_t timeT)
+{
+    tm t = *gmtime(&timeT);
+    logger("[ ", t.tm_mday, ".", t.tm_mon+1, '.', t.tm_year+1900, " - ");
+    return logger(t.tm_hour, ":", t.tm_min, ":", t.tm_sec, " ]");
+}
+
+
 Logger::Logger() : outStream(&std::cout), directory("stdout") {}
 Logger::Logger( const char* dir, const char* fileName)
 {

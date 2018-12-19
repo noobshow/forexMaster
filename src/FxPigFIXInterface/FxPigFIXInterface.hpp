@@ -20,7 +20,7 @@ public:
 
     /* Interface overwiev is in TradeInterface.hpp */
     void subscribeForPrice(Symbols::Pair pair, 
-                           std::function<void(float, float, timePoint)> callback);
+                           std::function<void(float, float, TimePoint)> callback);
 
     Position buyBet(Symbols::Pair pair, float quantity);
     Position sellBet(Symbols::Pair pair, float quantity);

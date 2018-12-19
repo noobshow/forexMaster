@@ -1,20 +1,30 @@
 #include "HistoricalInterface.hpp"
 
 HistoricalInterface::HistoricalInterface(
-        int fromDay, int fromMonth, int fromYear,
-        int toDay, int toMonth, int toYear,
         Symbols::Symbol baseCurrnecy, float startingBalance,
-        std::chrono::milliseconds delay
+        int fromMonth, int fromYear,
+        int toMonth, int toYear,
+        const Logger& superLogger
     )
-    : TradeInterface(baseCurrency, startingBalance),
-    connectionDelay(delay)
+    : TradeInterface(baseCurrency, startingBalance)
 {
+    myLogg = superLogger.subLogger("HistoricalInterface", "HistoricalInterfaceLog.txt");
 
+    try
+    {
+        dataReader = std::make_unique<DataReader>(Symbols::EURUSD, 1, 2009);
+    }
 
+    catch(std::string& error)
+    {
+        myLogg << "Error while reading historical data: " + error << "\n";
+    }
+
+    return;
 }
 
 void HistoricalInterface::subscribeForPrice(Symbols::Pair pair, 
-            std::function<void(float, float, timePoint)> callback)
+            std::function<void(float, float, TimePoint)> callback)
 {
 
 

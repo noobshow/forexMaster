@@ -1,8 +1,9 @@
-#pragma once
+ #pragma once
 
 #include "Symbols.hpp"
 #include <functional>
 #include <chrono>
+#include <utils/Logger.hpp>
 
 /*
     Trade interface provides interface for trading on hedged(multiposition) account
@@ -15,10 +16,10 @@ class TradeInterface
 public:
     const Symbols::Symbol baseCurrency; // currency in which money is held
 
-    using timePoint = std::chrono::system_clock::time_point;
+    struct TimePoint;
 
     virtual void subscribeForPrice(Symbols::Pair pair,
-                std::function<void(float, float, timePoint)> callback) = 0;
+                std::function<void(float, float, TimePoint)> callback) = 0;
                 //void callback(float bid, float ask, timePoint updateTime);
 
     struct Position;
@@ -35,6 +36,25 @@ public:
     virtual float calculateGain(const Position& pos, float closePrice) const = 0;
 
     float getBalance() const { return balance; };
+
+    struct TimePoint
+    {
+        int year, month;
+        std::chrono::milliseconds timeSinceStart; //time since start of the month
+
+        TimePoint(){}
+        TimePoint(int year, int month, int day, int hour, int minute, int secs, int millis);
+
+        std::chrono::milliseconds timeTo(const TimePoint& b) const;
+
+        struct Date
+        {
+            int year, month, day;
+            int hour, minute, second, millisec;
+        };
+
+        Date toDate() const;
+    };
 
     struct Position
     {
@@ -66,3 +86,5 @@ protected:
     //For derivative classes to access Position::ID
     int& getPosID(Position& pos) const { return pos.ID; };
 };
+
+Logger& operator<<(Logger& logger, const TradeInterface::TimePoint t);

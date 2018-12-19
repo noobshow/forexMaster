@@ -2,6 +2,7 @@
 #include <utils/Logger.hpp>
 #include <FIX/FIX.hpp>
 #include "Symbols.hpp"
+#include <HistoricalInterface/HistoricalInterface.hpp>
 
 void testQuoteSession()
 {
@@ -81,7 +82,26 @@ void testTradeSession()
 
 int main()
 {
-    testTradeSession();    
+    //testQuoteSession();
+    //testTradeSession();    
+
+    DataReader* reader;
+
+    try
+    {
+        reader = new DataReader(Symbols::EURUSD, 10, 2010);
+    }
+
+    catch(std::string readerError)
+    {
+        return 1;
+    }
+
+    DataReader::TickData tickData = reader->getNextTick();
+
+    logg << tickData.bid << ' ' << tickData.ask << ' ' << tickData.time << "\n";
+
+    delete reader;
 
     return 0;
 }

@@ -2,20 +2,22 @@
 
 #include "../TradeInterface.hpp"
 #include "../Symbols.hpp"
+#include "DataReader.hpp"
+#include <utils/Logger.hpp>
 
 class HistoricalInterface : public TradeInterface
 {
 public:
     HistoricalInterface(
-        int fromDay, int fromMonth, int fromYear,
-        int toDay, int toMonth, int toYear,
         Symbols::Symbol baseCurrnecy, float startingBalance,
-        std::chrono::milliseconds connectionDelay = std::chrono::milliseconds(20)
+        int fromMonth, int fromYear,
+        int toMonth, int toYear,
+        const Logger& superLogger
     );
 
     /* Interface overwiev is in TradeInterface.hpp */
     void subscribeForPrice(Symbols::Pair pair, 
-                           std::function<void(float, float, timePoint)> callback);
+                           std::function<void(float, float, TimePoint)> callback);
 
     Position buyBet(Symbols::Pair pair, float quantity);
     Position sellBet(Symbols::Pair pair, float quantity);
@@ -27,5 +29,8 @@ public:
     ~HistoricalInterface();
 
 private:
+    Logger myLogg;
+    std::unique_ptr<DataReader> dataReader;
+
     std::chrono::milliseconds connectionDelay;
 };
