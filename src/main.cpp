@@ -3,6 +3,7 @@
 #include <FIX/FIX.hpp>
 #include "Symbols.hpp"
 #include <HistoricalInterface/HistoricalInterface.hpp>
+#include "BasicTradeBot/BasicTradeBot.hpp"
 
 void testQuoteSession()
 {
@@ -80,28 +81,47 @@ void testTradeSession()
     delete tradeSession;
 }
 
+void testHistoricalInterface()
+{
+    HistoricalInterface interface(Symbols::EUR, 
+    1000.f,
+    1, 2010,
+    12, 2011,
+    fileLogg);
+
+    interface.subscribeForPrice(Symbols::EURUSD, 
+    [](TradeInterface::Tick tick){
+        logg << "Price of EURUSD changed to " << tick.bid << " on " << tick.time << "\n";
+    });
+    
+    interface.subscribeForPrice(Symbols::EURJPY, 
+    [](TradeInterface::Tick tick){
+        logg << "Price of EURJPY changed to " << tick.bid << " on " << tick.time << "\n";
+    });
+}
+
+void testBasicBot()
+{
+    HistoricalInterface interface(Symbols::EUR, 
+    1000.f,
+    1, 2010,
+    12, 2011,
+    fileLogg);
+
+    BasicTrader bot(&interface);
+
+    for(int i = 0; i < 1000; i++)
+    {
+        interface.update();
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+}
+
 int main()
 {
     //testQuoteSession();
     //testTradeSession();    
-
-    DataReader* reader;
-
-    try
-    {
-        reader = new DataReader(Symbols::EURUSD, 10, 2010);
-    }
-
-    catch(std::string readerError)
-    {
-        return 1;
-    }
-
-    DataReader::TickData tickData = reader->getNextTick();
-
-    logg << tickData.bid << ' ' << tickData.ask << ' ' << tickData.time << "\n";
-
-    delete reader;
-
+    //testHistoricalInterface();
+    testBasicBot();
     return 0;
 }

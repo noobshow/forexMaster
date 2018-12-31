@@ -4,8 +4,14 @@
 #include "../Symbols.hpp"
 #include "DataReader.hpp"
 #include <utils/Logger.hpp>
+#include <map>
+#include <thread>
+#include <mutex>
+#include <atomic>
+//#include <memory>
 
 class HistoricalInterface : public TradeInterface
+/* Interface overwiev is in TradeInterface.hpp */
 {
 public:
     HistoricalInterface(
@@ -15,9 +21,9 @@ public:
         const Logger& superLogger
     );
 
-    /* Interface overwiev is in TradeInterface.hpp */
+    /* This starts giving tick updates from start of current month */
     void subscribeForPrice(Symbols::Pair pair, 
-                           std::function<void(float, float, TimePoint)> callback);
+                           std::function<void(TradeInterface::Tick)> callback);
 
     Position buyBet(Symbols::Pair pair, float quantity);
     Position sellBet(Symbols::Pair pair, float quantity);
@@ -28,9 +34,37 @@ public:
 
     ~HistoricalInterface();
 
+    void update(); // skoczy do nast ticku
+
 private:
     Logger myLogg;
-    std::unique_ptr<DataReader> dataReader;
+    TimePoint curTime;
 
     std::chrono::milliseconds connectionDelay;
+
+    struct Subscription
+    {
+        Subscription(Symbols::Pair pair, int month, int year,
+            const std::function<void(TradeInterface::Tick)>& callbackFunc);
+
+        void getNextTick();
+
+        TradeInterface::Tick nextTick;
+
+        Symbols::Pair pair;
+        std::unique_ptr<DataReader> dataReader;
+        std::function<void(TradeInterface::Tick)> callback;
+    };
+    
+    struct cmp {bool operator()(Subscription*  a, Subscription* b) const
+     {
+         if(a->nextTick.time < b->nextTick.time) return true;
+         if(b->nextTick.time < a->nextTick.time) return false;
+         return (long long)a < (long long)b;
+     }};
+
+    std::set<Subscription*, cmp> subscribtions;
+    //std::vector<std::pair<float, float> > curPrice;
+
+    std::map<Symbols::Pair, std::pair<float, float>> curPrice;
 };

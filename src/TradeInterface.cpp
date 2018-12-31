@@ -1,5 +1,9 @@
 #include "TradeInterface.hpp"
 
+
+TradeInterface::TradeInterface(Symbols::Symbol baseSymbol, float startBalance)
+    : baseCurrency(baseSymbol), balance(startBalance) {}
+
 TradeInterface::TimePoint::TimePoint(int years, int months, int day, int hour, int minute, int secs, int millis)
 {
     year = years;
@@ -13,8 +17,70 @@ TradeInterface::TimePoint::TimePoint(int years, int months, int day, int hour, i
     timeSinceStart += std::chrono::milliseconds(millis);
 }
 
+bool TradeInterface::TimePoint::operator<(const TimePoint& b) const
+{
+    if(year != b.year)
+        return year < b.year;
+    
+    if(month != b.month)
+        return month < b.month;
+
+    return timeSinceStart < b.timeSinceStart;
+}
+
 std::chrono::milliseconds TradeInterface::TimePoint::timeTo(const TradeInterface::TimePoint& b) const
 {
+    /*
+    auto howManyDays = [](int month, int year)-> int
+    {
+        auto isLeap = [](int year)->bool
+        {
+            return (year%4 == 0 && year%100 ! = 0) 
+                    || year%400 == 0;
+        }
+
+        switch(month)
+        {
+            case 1:
+                return 31;
+            case 2: 
+                if(isLeap)
+                    return 29;
+                else
+                    return 28;
+            case 3:
+                return 31:
+            case 4:
+                return 30;
+            case 5:
+                return 31;
+            case 6:
+                return 30;
+            case 7:
+                return 31;
+            case 8: 
+                return 31;
+            case 9:
+                return 30;
+            case 10:
+                return 31;
+            case 11:
+                return 30;
+            case 12:
+                return 31;
+        }
+    };
+
+    int curYear = year;
+    int curMonth = month;
+    std::chrono::milliseconds res(0);
+    std::chrono::milliseconds millisPerDay(1000*60*60*24);
+    while(curYear != b.year || curMonth != b.month)
+    {
+        auto curMillis = millisPerDay*howManyDays(curMonth, curYear);
+
+    }   
+    */
     abort();
 }
 

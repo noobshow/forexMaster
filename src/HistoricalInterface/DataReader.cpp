@@ -30,7 +30,7 @@ DataReader::DataReader(Symbols::Pair pair,
     curFile = fopen(fileName.c_str(), "rb");
     if(!curFile)
     {
-        throw std::string("Historical Data for ");
+        throw std::string("Couldnt open "+fileName+"!");
         return;
     }
 }
@@ -63,7 +63,6 @@ DataReader::TickData DataReader::getNextTick()
         std::tm tstruct;
         tstruct.tm_year = curYear - 1900;
         tstruct.tm_mon = curMonth-1;
-        logg << curMonth << '\n';
         
         int millis = tickTime%1000;
         tickTime /= 1000;
@@ -101,8 +100,6 @@ DataReader::TickData DataReader::getNextTick()
             abort();
         }
 
-        logg << getFileName(myPair, curMonth, curYear) << '\n';
-        logg << curMonth << ' ' << curYear << '\n';
         if(curYear > 2018)
             return {};
         return getNextTick();

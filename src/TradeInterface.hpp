@@ -17,9 +17,10 @@ public:
     const Symbols::Symbol baseCurrency; // currency in which money is held
 
     struct TimePoint;
+    struct Tick;
 
     virtual void subscribeForPrice(Symbols::Pair pair,
-                std::function<void(float, float, TimePoint)> callback) = 0;
+                std::function<void(Tick)> callback) = 0;
                 //void callback(float bid, float ask, timePoint updateTime);
 
     struct Position;
@@ -37,6 +38,7 @@ public:
 
     float getBalance() const { return balance; };
 
+
     struct TimePoint
     {
         int year, month;
@@ -46,6 +48,7 @@ public:
         TimePoint(int year, int month, int day, int hour, int minute, int secs, int millis);
 
         std::chrono::milliseconds timeTo(const TimePoint& b) const;
+        bool operator<(const TimePoint& b) const;
 
         struct Date
         {
@@ -54,6 +57,12 @@ public:
         };
 
         Date toDate() const;
+    };
+
+    struct Tick
+    {
+        float bid, ask;
+        TimePoint time;
     };
 
     struct Position
@@ -68,7 +77,6 @@ public:
             Buy,
             Sell,
             Closed
-            
         };
         Type type;
 
@@ -76,9 +84,8 @@ public:
         friend TradeInterface;
         int ID;
     };
-
-    TradeInterface(Symbols::Symbol baseSymbol, float startBalance) 
-        : baseCurrency(baseSymbol), balance(startBalance) {}
+    TradeInterface() : baseCurrency(Symbols::EUR){}
+    TradeInterface(Symbols::Symbol baseSymbol, float startBalance);
 
 protected:
     float balance; //in baseCurrency
