@@ -1,6 +1,8 @@
-# forexMaster
-Attempt at automatic forex trader build on FIX Protocol
-Currently finished basic FIX functionality and starting Trading Interface for bots, backtesting etc...
+# ForexMaster
+Program using FIX Protocol to connect with cTrader brokers and trade currency  
+Basic functionality works but no real trading algorithm is implemented  
+Project suspended until i learn neural networks  
+
 
 
 
